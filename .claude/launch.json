@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "al-awraq-ops-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "al-awraq-ops", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}

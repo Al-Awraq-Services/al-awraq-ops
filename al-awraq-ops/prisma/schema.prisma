@@ -1,0 +1,402 @@
+// Al Awraq Services — Internal Ops Prototype
+//
+// Phase A: foundation, no models.
+// Phase B: User, Session, AuditLog, PasswordResetToken — authentication and
+// role management only, per the approved Phase 3/4/5 scope.
+// Phase C: Customer, Lead, Service — core data model.
+// Phase D, Subphase D1 (this addition): Quote, QuoteItem. Two of D1's
+// scoping questions (Quote's required linkage, Quote's role access) were
+// still unanswered by the sponsor when this was built — the developer
+// authorized proceeding on documented assumptions instead of waiting; see
+// docs/OPEN_DECISIONS.md "Phase D, D1" for the assumptions made and why.
+// Job, Note, FileAsset remain unbuilt — do not add them here without
+// updating docs/CHANGE_LOG.md and docs/OPEN_DECISIONS.md first (no silent
+// scope expansion).
+//
+// Public request-a-quote pass (2026-09-13): added `WEBSITE` to LeadSource
+// and made `Lead.createdByUserId`/`createdBy` optional — the app's first
+// unauthenticated write path (a public form creates a Lead with no signed-
+// in actor). This is explicitly flagged in docs/OPEN_DECISIONS.md as a
+// developer-scoped prototype of a feature whose very existence is a
+// business-owner decision, not yet approved — see that file before this is
+// ever linked publicly or takes real customer data.
+//
+// Invoicing pass (2026-09-13): added `APPROVED` to QuoteStatus, and the
+// Invoice/InvoiceItem models. The developer asked for invoicing to trigger
+// off "a job done, or/and a quotation approved" — Job does not exist yet
+// (still Phase D2/D3, deliberately skipped for this pass, see
+// docs/OPEN_DECISIONS.md), so this wires invoicing to Quote approval only.
+// Two explicit deviations from earlier sponsor-approved decisions, both
+// developer-directed and disclosed, not silent: (1) the Phase 3/5
+// sponsor-approved "Quote lifecycle: DRAFT, SENT only" now has a third
+// status; (2) Quote's "remains editable at every status — no lock" C3/D1
+// precedent no longer holds once a Quote is Approved — see the Quote model
+// comment below for why an invoiced Quote has to stop changing.
+//
+// Role is a plain enum on User, not a separate Role table — a deliberate
+// Phase 3 simplification (only 3 roles are approved for the prototype;
+// see the Phase 3 architecture "Role — Challenged" note). Assignment and
+// PaymentStatus are likewise fields, not tables — not relevant yet since
+// Job does not exist until Phase D.
+
+// Prisma 7 generates an ESM TypeScript client rather than the older
+// node_modules-based JS client, and connection config now lives in
+// prisma7.config.ts + a driver adapter (see src/lib/db.ts) instead of a
+// `url` field here. Confirmed against the installed prisma@7.10.0 CLI.
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  TECHNICIAN
+}
+
+/// Internal staff/admin/technician accounts. No public sign-up exists —
+/// every User row is created by an Admin (or the one-time seed script for
+/// the very first Admin). See docs/SECURITY_BASELINE.md.
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         Role
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+
+  sessions            Session[]
+  auditLogEntries     AuditLog[]           @relation("AuditLogActor")
+  passwordResetTokens PasswordResetToken[]
+
+  // Phase C — attribution only (who created each record). Purely relational;
+  // adds no new column to the existing `users` table.
+  createdCustomers Customer[]
+  createdLeads     Lead[]
+  createdServices  Service[]
+  // Phase D1 — same attribution pattern.
+  createdQuotes    Quote[]
+  // Invoicing pass — same attribution pattern. An Invoice is always
+  // machine-generated (see Invoice model comment), but attributed to
+  // whichever staff member's action approved the Quote that triggered it —
+  // never null, unlike Lead's public-submission case.
+  createdInvoices  Invoice[]
+
+  @@map("users")
+}
+
+/// DB-backed sessions (not stateless JWT) so deactivating a user invalidates
+/// their access immediately on next request, per Phase 4 §4. `tokenHash` is
+/// the SHA-256 hash of the raw session token stored in the browser cookie —
+/// the raw token itself is never persisted.
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// One-time Admin-issued token used for both first-time account setup and
+/// later password resets (Phase 5 §3/§4 — same underlying mechanism, only
+/// the on-screen copy differs). `tokenHash` is the SHA-256 hash of the raw
+/// token shown once to the issuing Admin; the raw value is never persisted.
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issuedById String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  consumedAt DateTime?
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+/// Append-only accountability trail, mandated by docs/SECURITY_BASELINE.md.
+/// No code path may update or delete a row here — enforced by never
+/// exposing an update/delete action for this model anywhere in the app,
+/// not just by convention.
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String?
+  actor        User?    @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  action       String
+  targetType   String
+  targetId     String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}
+
+// --- Phase C: Core Data Model and CRUD Foundation ---
+// Customer, Lead, Service only — per the approved Phase C scope. No Quote,
+// QuoteItem, Job, Note, or FileAsset here; those are Phase D/E.
+
+enum LeadSource {
+  PHONE
+  WHATSAPP
+  REFERRAL
+  WEBSITE
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONVERTED
+  LOST
+}
+
+/// A person/property Al Awraq deals with. Admin + Staff only — Technician
+/// has no access at all (enforced server-side, not just hidden in nav).
+/// Archive only, per docs/SECURITY_BASELINE.md — a Customer is never hard
+/// deleted, since Lead/Service (and, later, Quote/Job) history would break.
+model Customer {
+  id         String   @id @default(cuid())
+  name       String
+  phone      String
+  email      String?
+  address    String?
+  notes      String?
+  isArchived Boolean  @default(false)
+
+  createdByUserId String
+  createdBy       User   @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
+
+  leads    Lead[]
+  quotes   Quote[]
+  invoices Invoice[]
+
+  @@index([name])
+  @@index([phone])
+  @@map("customers")
+}
+
+/// An inbound inquiry. May exist without a linked Customer (per the
+/// sponsor-approved decision that a Lead can precede a formal Customer
+/// record). Remains editable at every status — no lock behavior was
+/// approved. Admin + Staff only for viewing/managing — but see
+/// `createPublicLeadRequestAction` (src/actions/public.ts): the public
+/// "Request a Quote" form creates a Lead directly, unauthenticated, which
+/// is why `createdByUserId` is optional here (and nowhere else in this
+/// schema) — null means "no staff member created this," not a data gap.
+model Lead {
+  id          String     @id @default(cuid())
+  source      LeadSource
+  description String
+  status      LeadStatus @default(NEW)
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  createdByUserId String?
+  createdBy       User?    @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
+
+  quotes Quote[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("leads")
+}
+
+/// Admin-only service catalog. `placeholderPrice` is exactly that — a
+/// labeled market-benchmark or estimate value, never Al Awraq's official
+/// rate, per the sponsor's Market-price rule. `priceSource`/
+/// `priceSourceDate` are required together whenever a price is set —
+/// enforced in the validation layer (src/lib/validation/service.ts), not
+/// at the database level, since Postgres/Prisma don't express "required
+/// together" as a column constraint here. Archive via `isActive`, never
+/// hard delete — existing Quote line items (Phase D) must be able to keep
+/// referencing a deactivated Service.
+model Service {
+  id               String    @id @default(cuid())
+  name             String
+  category         String?
+  description      String?
+  placeholderPrice Decimal?  @db.Decimal(10, 2)
+  priceSource      String?
+  priceSourceDate  DateTime?
+  isActive         Boolean   @default(true)
+
+  createdByUserId String
+  createdBy       User   @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
+
+  quoteItems QuoteItem[]
+
+  @@map("services")
+}
+
+// --- Phase D, Subphase D1: Quote + QuoteItem ---
+// Two scoping questions were still open when this was built — see the file
+// header above and docs/OPEN_DECISIONS.md "Phase D, D1" for the exact
+// assumptions made (Quote requires a Customer; Admin + Staff access, same
+// as Customer/Lead) and why proceeding without sponsor sign-off was
+// authorized. Job/Note/FileAsset remain unbuilt.
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  /// Added in the invoicing pass (2026-09-13) — a deviation from the
+  /// Phase 3/5 sponsor-approved "DRAFT, SENT only" lifecycle, made at the
+  /// developer's explicit direction, not silently. See the file header and
+  /// docs/OPEN_DECISIONS.md. Reaching this status auto-generates exactly
+  /// one Invoice (see `updateQuoteAction`, src/actions/quotes.ts) and locks
+  /// the Quote — see the model comment below.
+  APPROVED
+}
+
+/// A price quotation. Always references a Customer (assumption, see above);
+/// may optionally also reference the Lead it originated from. No delete
+/// action.
+///
+/// Editable at every status *except* `APPROVED` — a deviation from the
+/// C3/D1 "no lock at any status" precedent, made deliberately for the
+/// invoicing pass: once a Quote is Approved it has generated an Invoice,
+/// which is an immutable financial record (see Invoice below); letting the
+/// Quote's own customer/notes/line items keep changing after that would let
+/// the source data silently drift out of sync with what was actually
+/// invoiced. `requireQuoteEditable` (src/actions/quotes.ts) is the single
+/// place this lock is enforced — every mutating Quote/QuoteItem action
+/// calls it first.
+model Quote {
+  id     String      @id @default(cuid())
+  status QuoteStatus @default(DRAFT)
+  notes  String?
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  leadId     String?
+  lead       Lead?    @relation(fields: [leadId], references: [id])
+
+  createdByUserId String
+  createdBy       User   @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
+
+  items   QuoteItem[]
+  invoice Invoice?
+
+  @@index([customerId])
+  @@index([status])
+  @@map("quotes")
+}
+
+/// One priced line on a Quote. `serviceId` optionally records which catalog
+/// Service a line started from, purely for traceability — it does not
+/// change how the line behaves or displays. Per the approved decision,
+/// custom (non-catalog) lines carry no placeholder label: every line is
+/// just a description + quantity + unit price, catalog-derived or not.
+/// `unitPrice` is the actual quoted price for this line — never read from
+/// or written back to `Service.placeholderPrice`, which stays an unrelated
+/// value on Service. No stored line/quote total — computed on read from
+/// quantity × unitPrice, so it can never drift out of sync with the lines.
+model QuoteItem {
+  id          String  @id @default(cuid())
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(10, 2)
+
+  quoteId String
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([quoteId])
+  @@map("quote_items")
+}
+
+// --- Invoicing pass (2026-09-13) ---
+// Job does not exist yet (still Phase D2/D3, deliberately skipped here —
+// see docs/OPEN_DECISIONS.md), so invoicing is wired to Quote approval
+// only. When Job is eventually built, a Job-completion trigger can be
+// added the same way without redesigning Invoice itself.
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+}
+
+/// Machine-generated the moment a Quote reaches `APPROVED`
+/// (`updateQuoteAction`, src/actions/quotes.ts) — never created by a form,
+/// per the developer's "automatically generated" request. Exactly one
+/// Invoice per Quote (`quoteId @unique`); `updateQuoteAction` also checks
+/// for an existing one before generating, so re-saving an already-Approved
+/// Quote (a no-op status-wise) can never create a duplicate.
+///
+/// `sequenceNumber` is a separate autoincrementing integer purely for a
+/// human-readable invoice number (formatted as `INV-000123` in the UI,
+/// src/lib/ui/invoiceNumber.ts) — distinct from `id` (the cuid primary key
+/// used everywhere else in this schema), since a cuid is a poor invoice
+/// number to read aloud to a customer or write on a paper receipt.
+///
+/// No stored total, same reasoning as Quote/QuoteItem: computed live from
+/// `items` on read, so it can never drift — safe here specifically because
+/// `InvoiceItem` rows are themselves an immutable snapshot (see below), not
+/// because Invoice totals are allowed to change after the fact.
+model Invoice {
+  id             String        @id @default(cuid())
+  sequenceNumber Int           @unique @default(autoincrement())
+  status         PaymentStatus @default(UNPAID)
+
+  quoteId String  @unique
+  quote   Quote   @relation(fields: [quoteId], references: [id])
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  createdByUserId String
+  createdBy       User     @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
+  paidAt          DateTime?
+
+  items InvoiceItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("invoices")
+}
+
+/// A frozen snapshot of one QuoteItem at the moment its Quote was Approved
+/// — deliberately a *copy*, not a shared reference to QuoteItem, and
+/// deliberately has no update action anywhere in this codebase. An invoice
+/// line must never change after the invoice exists, even if the Quote it
+/// came from somehow could (it can't — see the Quote model comment); this
+/// is the actual enforcement of "an invoice is a historical record," not
+/// just a comment. Same shape as QuoteItem minus `serviceId` — the catalog
+/// traceability link matters for a Quote being actively built, not for a
+/// document that already exists.
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  description String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(10, 2)
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}

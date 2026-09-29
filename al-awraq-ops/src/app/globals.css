@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/*
+ * Premium visual pass (2026-09-12) — builds on the UI/Branding pass
+ * (2026-09-09). Still light mode only (see docs/OPEN_DECISIONS.md); this
+ * pass adds motion (fade-in keyframes), a softer layered canvas instead of
+ * flat gray, refined focus/selection states, and font smoothing tuned for
+ * the Geist family already in use (see src/app/layout.tsx) — no new font
+ * was introduced; Geist was judged close enough to the "clean geometric
+ * sans" reference point (Apple's SF Pro) that swapping fonts would add
+ * risk (a new Google Fonts subset, different metrics needing re-tuning
+ * across every page) without a real payoff over using Geist properly:
+ * tighter tracking on headings, real weight contrast, more generous scale.
+ */
+:root {
+  --background: #f5f6f8;
+  --foreground: #0a0a0a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  /* A faint, fixed radial highlight instead of flat gray — the kind of
+     subtle depth premium marketing/product pages use so a plain page
+     never reads as "unstyled". Fixed attachment so it doesn't scroll with
+     content and never fights the page's own background-color paint. */
+  background-color: var(--background);
+  background-image: radial-gradient(
+    120% 100% at 50% -10%,
+    rgba(29, 78, 216, 0.05),
+    transparent 55%
+  );
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(29, 78, 216, 0.2);
+  color: #0a0a0a;
+}
+
+/* A visible-but-quiet focus ring everywhere, keyboard-only (mouse clicks
+   don't trigger :focus-visible) — accessible without the "everything has
+   a blue halo on click" look. */
+:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility animate-page-in {
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+/* Applied to a list of cards/rows to stagger their entrance slightly —
+   pair with an inline `--i` custom property set to the item's index. */
+@utility animate-stagger {
+  animation: fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+/* Slim, quiet scrollbars (WebKit) so the horizontally-scrollable nav strip
+   and wide tables don't drag in the browser's default chunky scrollbar. */
+::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
