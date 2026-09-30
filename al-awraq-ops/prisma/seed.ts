@@ -1,94 +1,44 @@
 /**
- * One-time bootstrap: creates the first Admin account.
+ * One-time bootstrap: creates the singleton BusinessProfile row, pre-filled
+ * with the real company details already visible on the owner's existing
+ * invoice template, so Settings isn't blank on first run.
  *
- * Run via `npm run db:seed` (or `npx prisma db seed`), never automatically
- * against any environment that already has an Admin — this script checks
- * for one first and exits without changes if it finds one.
+ * `passwordHash` is deliberately left null — the app's one-time "Set your
+ * password" screen (src/app/(app)/login/page.tsx) fills it in on first
+ * visit. Nobody, including this script, sets a real password directly.
  *
- * Consistent with every other account creation path in this app: the new
- * Admin gets an unusable password hash and a one-time setup token, printed
- * once to the console. Nobody, including this script, ever sets or knows
- * a real password directly.
+ * Safe to re-run: does nothing if the singleton row already exists.
  */
 import { db } from "../src/lib/db";
-import { hash as argon2Hash } from "@node-rs/argon2";
-import { randomBytes, createHash } from "node:crypto";
-
-const SETUP_TOKEN_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
-
-/**
- * Duplicated from src/lib/auth/password.ts and src/lib/auth/tokens.ts,
- * deliberately, rather than imported. Both of those files are guarded by
- * `import "server-only"` — a real, load-bearing guard that stops their
- * native/crypto code from ever being pulled into a browser bundle (see the
- * Phase B bug writeup in docs/HANDOVER_LOG.md). That guard only works
- * inside Next.js's build pipeline; this seed script runs standalone under
- * `tsx`, which the guard can't distinguish from a browser context, so it
- * throws unconditionally. Rather than weaken the guard (which protects real
- * app code) or route the app through an unguarded module, this script
- * keeps its own minimal copies of just the three functions it needs. If
- * these ever drift from the guarded originals, that's a sign this file
- * needs another look — not a reason to import the guarded modules directly.
- */
-async function unusablePasswordHash(): Promise<string> {
-  return argon2Hash(randomBytes(32).toString("hex"));
-}
-function generateRawToken(): string {
-  return randomBytes(32).toString("hex");
-}
-function hashToken(raw: string): string {
-  return createHash("sha256").update(raw).digest("hex");
-}
 
 async function main() {
-  const existingAdmin = await db.user.findFirst({ where: { role: "ADMIN" } });
-  if (existingAdmin) {
-    console.log(
-      `An Admin account already exists (${existingAdmin.email}). Nothing to do.`,
-    );
+  const existing = await db.businessProfile.findUnique({
+    where: { id: "singleton" },
+  });
+  if (existing) {
+    console.log("BusinessProfile already seeded. Nothing to do.");
     return;
   }
 
-  const name = process.env.SEED_ADMIN_NAME?.trim() || "Admin";
-  const email = process.env.SEED_ADMIN_EMAIL?.trim();
-  if (!email) {
-    throw new Error(
-      "SEED_ADMIN_EMAIL is not set. Add it to your .env before running the seed script — see .env.example.",
-    );
-  }
-
-  const passwordHash = await unusablePasswordHash();
-  const rawToken = generateRawToken();
-  const tokenHash = hashToken(rawToken);
-
-  const admin = await db.user.create({
-    data: { name, email, role: "ADMIN", passwordHash },
-  });
-
-  // Self-issued at bootstrap — there is no other Admin to issue it. Every
-  // later token issuance goes through issueResetTokenAction instead.
-  await db.passwordResetToken.create({
+  await db.businessProfile.create({
     data: {
-      userId: admin.id,
-      tokenHash,
-      expiresAt: new Date(Date.now() + SETUP_TOKEN_LIFETIME_MS),
-      issuedById: admin.id,
+      id: "singleton",
+      legalName: "AL AWRAQ TECHNICAL SERVICES EST.",
+      trn: "104041465600003",
+      address: "Hor Al Anz Dubai UAE.",
+      phone: "971564015003",
+      email: "alawraqtech@gmail.com",
+      website: "www.alawraqservices.com",
+      logoUrl: "/logo.jpg",
+      defaultTaxRatePercent: 5,
+      nextInvoiceNumber: 1064,
+      invoiceNumberPrefix: "",
+      invoiceNumberPadding: 5,
+      passwordHash: null,
     },
   });
 
-  await db.auditLog.create({
-    data: {
-      actorUserId: admin.id,
-      action: "USER_CREATED",
-      targetType: "User",
-      targetId: admin.id,
-      metadata: { email: admin.email, role: admin.role, source: "seed" },
-    },
-  });
-
-  console.log("First Admin account created:", admin.email);
-  console.log("Set the initial password at (valid for 1 hour):");
-  console.log(`  http://localhost:3000/reset-password?token=${rawToken}`);
+  console.log("BusinessProfile seeded. Visit /login to set the app password.");
 }
 
 main()

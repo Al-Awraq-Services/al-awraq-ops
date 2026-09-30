@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { PrototypeBanner } from "@/components/ui/PrototypeBanner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Al Awraq Services — Internal Ops (Prototype)",
-  description:
-    "Private internal operations prototype. Not approved for production use.",
+  title: "Al Awraq Services — Invoicing",
+  description: "Instant invoicing for Al Awraq Technical Services EST.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -26,7 +24,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <PrototypeBanner />
         <div className="flex-1 flex flex-col">{children}</div>
       </body>
     </html>
