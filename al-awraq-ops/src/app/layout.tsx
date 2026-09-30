@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description: "Instant invoicing for Al Awraq Technical Services EST.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
