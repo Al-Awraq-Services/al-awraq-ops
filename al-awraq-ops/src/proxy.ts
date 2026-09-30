@@ -5,7 +5,7 @@ const SESSION_COOKIE_NAME = "aa_app_session";
 // Paths reachable without a valid app session.
 const PUBLIC_PATHS = ["/login", "/api/health"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
