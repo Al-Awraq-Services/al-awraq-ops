@@ -54,9 +54,12 @@ export async function deleteCustomerAction(
 ): Promise<{ error?: string }> {
   await requirePermissionForAction("canManageCustomers");
 
-  const invoiceCount = await db.invoice.count({ where: { customerId } });
-  if (invoiceCount > 0) {
-    return { error: "Cannot delete a customer with existing invoices." };
+  const [invoiceCount, inquiryCount] = await Promise.all([
+    db.invoice.count({ where: { customerId } }),
+    db.inquiry.count({ where: { customerId } }),
+  ]);
+  if (invoiceCount > 0 || inquiryCount > 0) {
+    return { error: "Cannot delete a customer with existing invoices or inquiries." };
   }
 
   await db.customer.delete({ where: { id: customerId } });

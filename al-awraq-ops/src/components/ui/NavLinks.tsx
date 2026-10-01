@@ -4,8 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Calculator,
   Receipt,
+  Building2,
   Users,
+  ClipboardList,
   Settings as SettingsIcon,
   UserCog,
   type LucideIcon,
@@ -17,21 +20,36 @@ export type NavPermissions = {
   isMainAccount: boolean;
   canViewInvoices: boolean;
   canViewCustomers: boolean;
+  canViewInquiries: boolean;
+  canViewPurchaseOrders: boolean;
 };
 
 /** Active-page nav highlighting. Isolated here (needs usePathname) so the
  * surrounding header/layout can stay a Server Component. Only renders the
- * links this account can actually use — Dashboard and Users are always
- * main-account-only (a hard rule, not a toggle; see appAuth.ts), Invoices/
- * Customers depend on that account's own canView… flags (main always
- * passes, same as every server-side guard). */
-export function NavLinks({ isMainAccount, canViewInvoices, canViewCustomers }: NavPermissions) {
+ * links this account can actually use — Dashboard, Accounting, and Users
+ * are always main-account-only (a hard rule, not a toggle; see
+ * appAuth.ts), everything else depends on that account's own canView…
+ * flags (main always passes, same as every server-side guard). */
+export function NavLinks({
+  isMainAccount,
+  canViewInvoices,
+  canViewCustomers,
+  canViewInquiries,
+  canViewPurchaseOrders,
+}: NavPermissions) {
   const pathname = usePathname();
 
   const items: NavItem[] = [
     ...(isMainAccount ? [{ href: "/", label: "Dashboard", icon: LayoutDashboard }] : []),
+    ...(isMainAccount ? [{ href: "/accounting", label: "Accounting", icon: Calculator }] : []),
     ...(isMainAccount || canViewInvoices
       ? [{ href: "/invoices", label: "Invoices", icon: Receipt }]
+      : []),
+    ...(isMainAccount || canViewInquiries
+      ? [{ href: "/inquiries", label: "Inquiries", icon: ClipboardList }]
+      : []),
+    ...(isMainAccount || canViewPurchaseOrders
+      ? [{ href: "/purchase-orders", label: "Purchase Orders", icon: Building2 }]
       : []),
     ...(isMainAccount || canViewCustomers
       ? [{ href: "/customers", label: "Customers", icon: Users }]

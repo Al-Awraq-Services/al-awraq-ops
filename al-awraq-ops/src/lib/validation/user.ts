@@ -2,15 +2,30 @@ import { z } from "zod";
 
 const usernamePattern = /^[a-z0-9._-]+$/;
 
-// "Manage" without "view" would leave an account able to create/edit
-// invoices (or customers) through the /new or /[id] pages but blocked
-// from the list page that gates on canView… — refine so that can't happen.
+const permissionFields = {
+  canViewInvoices: z.boolean(),
+  canManageInvoices: z.boolean(),
+  canViewCustomers: z.boolean(),
+  canManageCustomers: z.boolean(),
+  canViewInquiries: z.boolean(),
+  canManageInquiries: z.boolean(),
+  canViewPurchaseOrders: z.boolean(),
+  canManagePurchaseOrders: z.boolean(),
+};
+
+// "Manage" without "view" would leave an account able to create/edit a
+// record through its /new or /[id] pages but blocked from the list page
+// that gates on canView… — refine so that can't happen, for every pair.
 function requireViewForManage<
   T extends {
     canViewInvoices: boolean;
     canManageInvoices: boolean;
     canViewCustomers: boolean;
     canManageCustomers: boolean;
+    canViewInquiries: boolean;
+    canManageInquiries: boolean;
+    canViewPurchaseOrders: boolean;
+    canManagePurchaseOrders: boolean;
   },
 >(schema: z.ZodType<T>) {
   return schema
@@ -21,6 +36,14 @@ function requireViewForManage<
     .refine((v) => !v.canManageCustomers || v.canViewCustomers, {
       message: "Manage Customers requires View Customers too.",
       path: ["canManageCustomers"],
+    })
+    .refine((v) => !v.canManageInquiries || v.canViewInquiries, {
+      message: "Manage Inquiries requires View Inquiries too.",
+      path: ["canManageInquiries"],
+    })
+    .refine((v) => !v.canManagePurchaseOrders || v.canViewPurchaseOrders, {
+      message: "Manage Purchase Orders requires View Purchase Orders too.",
+      path: ["canManagePurchaseOrders"],
     });
 }
 
@@ -34,10 +57,7 @@ export const createUserSchema = requireViewForManage(
       .min(2, "Username must be at least 2 characters.")
       .regex(usernamePattern, "Username can only contain lowercase letters, numbers, ., _ and -."),
     password: z.string().min(8, "Password must be at least 8 characters."),
-    canViewInvoices: z.boolean(),
-    canManageInvoices: z.boolean(),
-    canViewCustomers: z.boolean(),
-    canManageCustomers: z.boolean(),
+    ...permissionFields,
   }),
 );
 
@@ -47,34 +67,32 @@ function checkbox(formData: FormData, name: string): boolean {
   return formData.get(name) === "on";
 }
 
+function parsePermissionFields(formData: FormData) {
+  return {
+    canViewInvoices: checkbox(formData, "canViewInvoices"),
+    canManageInvoices: checkbox(formData, "canManageInvoices"),
+    canViewCustomers: checkbox(formData, "canViewCustomers"),
+    canManageCustomers: checkbox(formData, "canManageCustomers"),
+    canViewInquiries: checkbox(formData, "canViewInquiries"),
+    canManageInquiries: checkbox(formData, "canManageInquiries"),
+    canViewPurchaseOrders: checkbox(formData, "canViewPurchaseOrders"),
+    canManagePurchaseOrders: checkbox(formData, "canManagePurchaseOrders"),
+  };
+}
+
 export function parseCreateUserFormData(formData: FormData) {
   return createUserSchema.safeParse({
     name: formData.get("name"),
     username: formData.get("username"),
     password: formData.get("password"),
-    canViewInvoices: checkbox(formData, "canViewInvoices"),
-    canManageInvoices: checkbox(formData, "canManageInvoices"),
-    canViewCustomers: checkbox(formData, "canViewCustomers"),
-    canManageCustomers: checkbox(formData, "canManageCustomers"),
+    ...parsePermissionFields(formData),
   });
 }
 
-export const updatePermissionsSchema = requireViewForManage(
-  z.object({
-    canViewInvoices: z.boolean(),
-    canManageInvoices: z.boolean(),
-    canViewCustomers: z.boolean(),
-    canManageCustomers: z.boolean(),
-  }),
-);
+export const updatePermissionsSchema = requireViewForManage(z.object(permissionFields));
 
 export function parseUpdatePermissionsFormData(formData: FormData) {
-  return updatePermissionsSchema.safeParse({
-    canViewInvoices: checkbox(formData, "canViewInvoices"),
-    canManageInvoices: checkbox(formData, "canManageInvoices"),
-    canViewCustomers: checkbox(formData, "canViewCustomers"),
-    canManageCustomers: checkbox(formData, "canManageCustomers"),
-  });
+  return updatePermissionsSchema.safeParse(parsePermissionFields(formData));
 }
 
 export const resetPasswordSchema = z.object({

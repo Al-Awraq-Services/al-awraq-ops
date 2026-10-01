@@ -42,6 +42,10 @@ export default async function CustomerDetailPage({
         include: { items: true },
         orderBy: { invoiceDate: "desc" },
       },
+      inquiries: {
+        include: { items: true },
+        orderBy: { inquiryDate: "desc" },
+      },
     },
   });
 
@@ -74,7 +78,34 @@ export default async function CustomerDetailPage({
     };
   });
 
-  const totalBalance = invoiceRows.reduce((sum, row) => sum + row.balanceDue, 0);
+  const inquiryRows = customer.inquiries.map((inquiry) => {
+    const totals = computeInvoiceTotals(
+      inquiry.items.map((item) => ({
+        quantity: toNum(item.quantity),
+        unitPrice: toNum(item.unitPrice),
+        retentionAmount: item.retentionAmount ? toNum(item.retentionAmount) : null,
+      })),
+      {
+        taxRatePercent: toNum(inquiry.taxRatePercent),
+        discountAmount: inquiry.discountAmount ? toNum(inquiry.discountAmount) : null,
+        shipmentAmount: inquiry.shipmentAmount ? toNum(inquiry.shipmentAmount) : null,
+        stampDutyAmount: inquiry.stampDutyAmount ? toNum(inquiry.stampDutyAmount) : null,
+        amountPaid: toNum(inquiry.amountPaid),
+      },
+    );
+    return {
+      id: inquiry.id,
+      inquiryNumber: inquiry.inquiryNumber,
+      inquiryDate: inquiry.inquiryDate,
+      grandTotal: totals.grandTotal,
+      balanceDue: totals.balanceDue,
+      status: totals.status,
+    };
+  });
+
+  const totalBalance =
+    invoiceRows.reduce((sum, row) => sum + row.balanceDue, 0) +
+    inquiryRows.reduce((sum, row) => sum + row.balanceDue, 0);
 
   const statusTone = (status: string): "green" | "blue" | "red" =>
     status === "PAID" ? "green" : status === "PARTIAL" ? "blue" : "red";
@@ -85,7 +116,13 @@ export default async function CustomerDetailPage({
         <Link href="/customers" className={link}>
           ← Back to customers
         </Link>
-        <h1 className={`${pageTitle} mt-2`}>{customer.name}</h1>
+        <div className="flex items-center gap-2 mt-2">
+          <h1 className={pageTitle}>{customer.name}</h1>
+          {customer.type === "BUSINESS" && <span className={badgeClass("blue")}>Business</span>}
+        </div>
+        {customer.type === "BUSINESS" && customer.companyName && (
+          <p className={mutedText}>{customer.companyName}</p>
+        )}
         <p className={pageSubtitle}>
           Customer since{" "}
           {customer.createdAt.toLocaleDateString("en-AE", {
@@ -100,6 +137,10 @@ export default async function CustomerDetailPage({
         <div className={statTile}>
           <div className={statLabel}>Invoices</div>
           <div className={statValueClass()}>{invoiceRows.length}</div>
+        </div>
+        <div className={statTile}>
+          <div className={statLabel}>Inquiries</div>
+          <div className={statValueClass()}>{inquiryRows.length}</div>
         </div>
         {user.isMainAccount && (
           <div className={statTile}>
@@ -123,10 +164,36 @@ export default async function CustomerDetailPage({
               contact: customer.contact ?? "",
               email: customer.email ?? "",
               notes: customer.notes ?? "",
+              type: customer.type,
+              companyName: customer.companyName ?? "",
+              businessTrn: customer.businessTrn ?? "",
+              contactPerson: customer.contactPerson ?? "",
             }}
           />
         ) : (
           <dl className="flex flex-col gap-2 text-sm">
+            {customer.type === "BUSINESS" && (
+              <>
+                {customer.companyName && (
+                  <div>
+                    <dt className={mutedText}>Company name</dt>
+                    <dd>{customer.companyName}</dd>
+                  </div>
+                )}
+                {customer.businessTrn && (
+                  <div>
+                    <dt className={mutedText}>Business TRN</dt>
+                    <dd>{customer.businessTrn}</dd>
+                  </div>
+                )}
+                {customer.contactPerson && (
+                  <div>
+                    <dt className={mutedText}>Contact person</dt>
+                    <dd>{customer.contactPerson}</dd>
+                  </div>
+                )}
+              </>
+            )}
             <div>
               <dt className={mutedText}>Address</dt>
               <dd>{customer.address || "—"}</dd>
@@ -195,11 +262,57 @@ export default async function CustomerDetailPage({
         )}
       </div>
 
+      {(user.isMainAccount || user.canViewInquiries) && (
+        <div>
+          <h2 className={`${sectionTitle} mb-3`}>Inquiries</h2>
+          {inquiryRows.length === 0 ? (
+            <p className={mutedText}>No inquiries for this customer yet.</p>
+          ) : (
+            <div className={tableWrap}>
+              <table className={table}>
+                <thead>
+                  <tr>
+                    <th className={thClass}>Number</th>
+                    <th className={thClass}>Date</th>
+                    <th className={thClass}>Total</th>
+                    <th className={thClass}>Balance</th>
+                    <th className={thClass}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inquiryRows.map((row) => (
+                    <tr key={row.id} className={trHover}>
+                      <td className={tdClass}>
+                        <Link href={`/inquiries/${row.id}`} className={link}>
+                          {row.inquiryNumber}
+                        </Link>
+                      </td>
+                      <td className={tdClass}>
+                        {row.inquiryDate.toLocaleDateString("en-AE", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </td>
+                      <td className={tdClass}>AED {formatMoney(row.grandTotal)}</td>
+                      <td className={tdClass}>AED {formatMoney(row.balanceDue)}</td>
+                      <td className={tdClass}>
+                        <span className={badgeClass(statusTone(row.status))}>{row.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {canManage && (
         <div className={cardClass}>
           <h2 className={`${sectionTitle} mb-3`}>Danger zone</h2>
           <p className={`${mutedText} mb-3`}>
-            A customer with existing invoices cannot be deleted.
+            A customer with existing invoices or inquiries cannot be deleted.
           </p>
           <DeleteCustomerButton customerId={customer.id} />
         </div>

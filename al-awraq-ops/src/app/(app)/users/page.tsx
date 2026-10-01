@@ -27,6 +27,10 @@ export default async function UsersPage() {
     else if (user.canViewInvoices) parts.push("View Invoices");
     if (user.canManageCustomers) parts.push("Manage Customers");
     else if (user.canViewCustomers) parts.push("View Customers");
+    if (user.canManageInquiries) parts.push("Manage Inquiries");
+    else if (user.canViewInquiries) parts.push("View Inquiries");
+    if (user.canManagePurchaseOrders) parts.push("Manage POs");
+    else if (user.canViewPurchaseOrders) parts.push("View POs");
     return parts.length > 0 ? parts.join(", ") : "No access yet";
   }
 

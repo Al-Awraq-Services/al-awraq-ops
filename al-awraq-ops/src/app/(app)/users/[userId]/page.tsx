@@ -57,6 +57,10 @@ export default async function UserDetailPage({
               canManageInvoices: user.canManageInvoices,
               canViewCustomers: user.canViewCustomers,
               canManageCustomers: user.canManageCustomers,
+              canViewInquiries: user.canViewInquiries,
+              canManageInquiries: user.canManageInquiries,
+              canViewPurchaseOrders: user.canViewPurchaseOrders,
+              canManagePurchaseOrders: user.canManagePurchaseOrders,
             }}
           />
         </div>

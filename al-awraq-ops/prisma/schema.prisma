@@ -52,6 +52,16 @@ model BusinessProfile {
   /// Zero-padded width, e.g. 5 -> "01064". Matches the sample invoice.
   invoiceNumberPadding Int   @default(5)
 
+  /// B2B pass (2026-10-01): same numbering pattern as Invoice, for Inquiry.
+  nextInquiryNumber   Int    @default(1)
+  inquiryNumberPrefix String @default("INQ-")
+  inquiryNumberPadding Int   @default(5)
+
+  /// Same pattern again, for PurchaseOrder (the buying side).
+  nextPoNumber   Int    @default(1)
+  poNumberPrefix String @default("PO-")
+  poNumberPadding Int   @default(5)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -82,24 +92,55 @@ model User {
   canViewCustomers   Boolean @default(false)
   canManageCustomers Boolean @default(false)
 
+  /// B2B pass (2026-10-01): Inquiry mirrors Invoice's permission pair
+  /// exactly. Purchase Order's pair also covers Vendor management — unlike
+  /// Customer (which has its own pair alongside Invoice), Vendor
+  /// deliberately does not get its own flags, to keep this list from
+  /// growing without bound; see docs/CHANGE_LOG.md for the reasoning.
+  canViewInquiries        Boolean @default(false)
+  canManageInquiries      Boolean @default(false)
+  canViewPurchaseOrders   Boolean @default(false)
+  canManagePurchaseOrders Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("users")
 }
 
+enum CustomerType {
+  INDIVIDUAL
+  BUSINESS
+}
+
 /// A lightweight address book — not an account, never signs in. Exists
 /// purely so the invoice form can offer name/address/contact autocomplete
 /// and so a customer's running balance across past invoices can be shown.
+///
+/// B2B pass (2026-10-01): extended with business fields rather than
+/// building a separate Company entity — one address book serves both
+/// Invoice (B2C) and Inquiry (B2B); `type` just determines which extra
+/// fields are relevant. All four additions are nullable/defaulted, so
+/// existing Invoice code (which only ever reads name/address/contact)
+/// needed no changes.
 model Customer {
-  id      String  @id @default(cuid())
+  id      String       @id @default(cuid())
   name    String
   address String?
   contact String?
   email   String?
   notes   String?
+  type    CustomerType @default(INDIVIDUAL)
+
+  /// Relevant when type is BUSINESS — shown on an Inquiry's billing block
+  /// and its PDF (UAE B2B VAT invoices conventionally print the buyer's
+  /// TRN alongside the seller's).
+  companyName   String?
+  businessTrn   String?
+  contactPerson String?
 
   invoices  Invoice[]
+  inquiries Inquiry[]
   createdAt DateTime  @default(now())
 
   @@index([name])
@@ -187,4 +228,166 @@ model InvoiceItem {
 
   @@index([invoiceId])
   @@map("invoice_items")
+}
+
+// --- B2B pass (2026-10-01): Inquiry, Purchase Order, Accounting ---
+// Inquiry/InquiryItem are structurally identical to Invoice/InvoiceItem —
+// see those models' comments for the "no stored totals, snapshot billing
+// details" reasoning, which applies here unchanged. Vendor/PurchaseOrder/
+// PurchaseOrderItem are the buying-side mirror. Expense is deliberately
+// minimal — see its own comment below.
+
+/// B2B counterpart to Invoice — same mechanics, billed to a business
+/// instead of an individual. Own numbered series (BusinessProfile
+/// nextInquiryNumber/inquiryNumberPrefix/inquiryNumberPadding).
+model Inquiry {
+  id            String   @id @default(cuid())
+  inquiryNumber String   @unique
+  inquiryDate   DateTime @default(now())
+  dueDate       DateTime?
+
+  poNumber      String?
+  paymentMethod String?
+  salesperson   String?
+
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id])
+  billingName    String
+  billingAddress String?
+  billingContact String?
+  /// Snapshotted the same way as billingName/Address/Contact — a later
+  /// edit to the Customer record never rewrites a past Inquiry's PDF.
+  billingCompanyName String?
+  billingBusinessTrn String?
+
+  notes String? @default("This is a VAT invoice.")
+
+  taxRatePercent  Decimal  @default(5) @db.Decimal(5, 2)
+  discountAmount  Decimal? @db.Decimal(10, 2)
+  shipmentAmount  Decimal? @db.Decimal(10, 2)
+  stampDutyAmount Decimal? @db.Decimal(10, 2)
+  amountPaid      Decimal  @default(0) @db.Decimal(10, 2)
+
+  items InquiryItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([inquiryDate])
+  @@map("inquiries")
+}
+
+model InquiryItem {
+  id        String  @id @default(cuid())
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  description     String
+  quantity        Decimal  @default(1) @db.Decimal(10, 2)
+  unit            String?
+  unitPrice       Decimal  @db.Decimal(10, 2)
+  retentionAmount Decimal? @db.Decimal(10, 2)
+
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([inquiryId])
+  @@map("inquiry_items")
+}
+
+/// The buying-side mirror of Customer — who Purchase Orders go to. Not an
+/// account, never signs in.
+model Vendor {
+  id      String  @id @default(cuid())
+  name    String
+  address String?
+  contact String?
+  email   String?
+  notes   String?
+
+  purchaseOrders PurchaseOrder[]
+  createdAt      DateTime        @default(now())
+
+  @@index([name])
+  @@map("vendors")
+}
+
+/// An order placed with a vendor — the mirror image of Invoice (money
+/// going out instead of coming in). Same no-stored-totals /
+/// snapshotted-billing-details pattern. No retentionAmount on its line
+/// items (not a buying-side concept) and no stampDutyAmount at the
+/// document level. Own numbered series (BusinessProfile
+/// nextPoNumber/poNumberPrefix/poNumberPadding).
+model PurchaseOrder {
+  id       String    @id @default(cuid())
+  poNumber String    @unique
+  orderDate    DateTime  @default(now())
+  expectedDate DateTime?
+
+  vendorId            String
+  vendor              Vendor  @relation(fields: [vendorId], references: [id])
+  billingVendorName    String
+  billingVendorAddress String?
+  billingVendorContact String?
+
+  notes String?
+
+  taxRatePercent Decimal  @default(5) @db.Decimal(5, 2)
+  discountAmount Decimal? @db.Decimal(10, 2)
+  shipmentAmount Decimal? @db.Decimal(10, 2)
+  /// How much of this PO has actually been paid to the vendor — this is
+  /// the number the Accounting Machine's cash-basis cost total reads
+  /// (src/app/(app)/accounting), not the PO's full amount.
+  amountPaid     Decimal  @default(0) @db.Decimal(10, 2)
+
+  items PurchaseOrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vendorId])
+  @@index([orderDate])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  description String
+  quantity    Decimal @default(1) @db.Decimal(10, 2)
+  unit        String?
+  unitPrice   Decimal @db.Decimal(10, 2)
+
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_items")
+}
+
+/// A general business cost not tied to a specific Purchase Order (rent,
+/// salaries, fuel, utilities...). Deliberately minimal — no line items, no
+/// vendor link, no payment-status tracking (an expense is recorded as
+/// already paid, on `date`). Entry happens directly inside the
+/// main-account-only Accounting page, not a separately permission-gated
+/// section — see the User model comment for why it has no canView/
+/// canManage pair of its own.
+model Expense {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  /// Free text, not an enum — a <datalist> in the UI suggests common
+  /// values (Rent, Utilities, Salaries, Fuel, Supplies, Maintenance,
+  /// Other) without forcing a fixed list, same philosophy as
+  /// Invoice.paymentMethod.
+  category    String
+  description String?
+  amount      Decimal  @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@map("expenses")
 }

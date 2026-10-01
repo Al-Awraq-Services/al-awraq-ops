@@ -66,10 +66,26 @@ export function CreateUserForm() {
           <input type="checkbox" name="canManageCustomers" className="h-4 w-4 rounded" />
           Manage Customers (create, edit, delete)
         </label>
+        <label className="flex items-center gap-2 text-sm text-neutral-800">
+          <input type="checkbox" name="canViewInquiries" className="h-4 w-4 rounded" />
+          View Inquiries (B2B)
+        </label>
+        <label className="flex items-center gap-2 text-sm text-neutral-800">
+          <input type="checkbox" name="canManageInquiries" className="h-4 w-4 rounded" />
+          Manage Inquiries (create, edit, delete, record payments)
+        </label>
+        <label className="flex items-center gap-2 text-sm text-neutral-800">
+          <input type="checkbox" name="canViewPurchaseOrders" className="h-4 w-4 rounded" />
+          View Purchase Orders
+        </label>
+        <label className="flex items-center gap-2 text-sm text-neutral-800">
+          <input type="checkbox" name="canManagePurchaseOrders" className="h-4 w-4 rounded" />
+          Manage Purchase Orders (create, edit, delete, vendors)
+        </label>
         <p className="mt-1 text-xs text-neutral-500">
-          The Dashboard and this Users screen are always main-account-only — not something
-          you can grant here. This account will also never see aggregate totals
-          (revenue, outstanding balance, customer balances), only a single invoice&apos;s
+          The Dashboard, Accounting, and this Users screen are always main-account-only — not
+          something you can grant here. This account will also never see aggregate totals
+          (revenue, outstanding balance, customer balances), only a single document&apos;s
           own amount when actually viewing it.
         </p>
       </fieldset>

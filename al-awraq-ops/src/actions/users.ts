@@ -54,6 +54,10 @@ export async function createUserAction(
         canManageInvoices: data.canManageInvoices,
         canViewCustomers: data.canViewCustomers,
         canManageCustomers: data.canManageCustomers,
+        canViewInquiries: data.canViewInquiries,
+        canManageInquiries: data.canManageInquiries,
+        canViewPurchaseOrders: data.canViewPurchaseOrders,
+        canManagePurchaseOrders: data.canManagePurchaseOrders,
       },
     });
     newId = user.id;

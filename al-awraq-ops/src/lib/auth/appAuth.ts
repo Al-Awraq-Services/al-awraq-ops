@@ -25,7 +25,11 @@ export type PermissionKey =
   | "canViewInvoices"
   | "canManageInvoices"
   | "canViewCustomers"
-  | "canManageCustomers";
+  | "canManageCustomers"
+  | "canViewInquiries"
+  | "canManageInquiries"
+  | "canViewPurchaseOrders"
+  | "canManagePurchaseOrders";
 
 export async function hashPassword(raw: string): Promise<string> {
   return argon2Hash(raw);

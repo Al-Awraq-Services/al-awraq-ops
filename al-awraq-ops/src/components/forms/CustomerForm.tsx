@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useActionState } from "react";
 import type { CustomerActionState } from "@/actions/customers";
 import {
@@ -21,6 +22,10 @@ type CustomerFormValues = {
   contact: string;
   email: string;
   notes: string;
+  type: "INDIVIDUAL" | "BUSINESS";
+  companyName: string;
+  businessTrn: string;
+  contactPerson: string;
 };
 
 const emptyValues: CustomerFormValues = {
@@ -29,6 +34,10 @@ const emptyValues: CustomerFormValues = {
   contact: "",
   email: "",
   notes: "",
+  type: "INDIVIDUAL",
+  companyName: "",
+  businessTrn: "",
+  contactPerson: "",
 };
 
 export function CustomerForm({
@@ -41,6 +50,7 @@ export function CustomerForm({
   defaultValues?: Partial<CustomerFormValues>;
 }) {
   const values = { ...emptyValues, ...defaultValues };
+  const [type, setType] = useState<"INDIVIDUAL" | "BUSINESS">(values.type);
   const [state, formAction, pending] = useActionState<CustomerActionState, FormData>(
     action,
     undefined,
@@ -48,6 +58,21 @@ export function CustomerForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <div className={fieldWrap}>
+        <label className={labelClass} htmlFor="type">
+          Type
+        </label>
+        <select
+          id="type"
+          name="type"
+          value={type}
+          onChange={(event) => setType(event.target.value as "INDIVIDUAL" | "BUSINESS")}
+          className={inputClass}
+        >
+          <option value="INDIVIDUAL">Individual</option>
+          <option value="BUSINESS">Business</option>
+        </select>
+      </div>
       <div className={fieldWrap}>
         <label className={labelClass} htmlFor="name">
           Name
@@ -61,6 +86,48 @@ export function CustomerForm({
           className={inputClass}
         />
       </div>
+
+      {type === "BUSINESS" && (
+        <div className="flex flex-col gap-4 rounded-xl border border-neutral-200 p-4">
+          <div className={fieldWrap}>
+            <label className={labelClass} htmlFor="companyName">
+              Company name
+            </label>
+            <input
+              id="companyName"
+              name="companyName"
+              type="text"
+              defaultValue={values.companyName}
+              className={inputClass}
+            />
+          </div>
+          <div className={fieldWrap}>
+            <label className={labelClass} htmlFor="businessTrn">
+              Business TRN
+            </label>
+            <input
+              id="businessTrn"
+              name="businessTrn"
+              type="text"
+              defaultValue={values.businessTrn}
+              className={inputClass}
+            />
+          </div>
+          <div className={fieldWrap}>
+            <label className={labelClass} htmlFor="contactPerson">
+              Contact person
+            </label>
+            <input
+              id="contactPerson"
+              name="contactPerson"
+              type="text"
+              defaultValue={values.contactPerson}
+              className={inputClass}
+            />
+          </div>
+        </div>
+      )}
+
       <div className={fieldWrap}>
         <label className={labelClass} htmlFor="address">
           Address

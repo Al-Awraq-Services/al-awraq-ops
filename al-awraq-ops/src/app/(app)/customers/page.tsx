@@ -31,37 +31,50 @@ export default async function CustomersPage({
     where: query
       ? { name: { contains: query, mode: "insensitive" } }
       : undefined,
-    include: { invoices: { include: { items: true } } },
+    include: {
+      invoices: { include: { items: true } },
+      inquiries: { include: { items: true } },
+    },
     orderBy: { name: "asc" },
   });
 
-  const rows = customers.map((customer) => {
-    const balance = customer.invoices.reduce((sum, invoice) => {
+  function docBalance(
+    docs: Array<{
+      items: Array<{ quantity: unknown; unitPrice: unknown; retentionAmount: unknown }>;
+      taxRatePercent: unknown;
+      discountAmount: unknown;
+      shipmentAmount: unknown;
+      stampDutyAmount: unknown;
+      amountPaid: unknown;
+    }>,
+  ) {
+    return docs.reduce((sum, doc) => {
       const totals = computeInvoiceTotals(
-        invoice.items.map((item) => ({
+        doc.items.map((item) => ({
           quantity: toNum(item.quantity),
           unitPrice: toNum(item.unitPrice),
           retentionAmount: item.retentionAmount ? toNum(item.retentionAmount) : null,
         })),
         {
-          taxRatePercent: toNum(invoice.taxRatePercent),
-          discountAmount: invoice.discountAmount ? toNum(invoice.discountAmount) : null,
-          shipmentAmount: invoice.shipmentAmount ? toNum(invoice.shipmentAmount) : null,
-          stampDutyAmount: invoice.stampDutyAmount ? toNum(invoice.stampDutyAmount) : null,
-          amountPaid: toNum(invoice.amountPaid),
+          taxRatePercent: toNum(doc.taxRatePercent),
+          discountAmount: doc.discountAmount ? toNum(doc.discountAmount) : null,
+          shipmentAmount: doc.shipmentAmount ? toNum(doc.shipmentAmount) : null,
+          stampDutyAmount: doc.stampDutyAmount ? toNum(doc.stampDutyAmount) : null,
+          amountPaid: toNum(doc.amountPaid),
         },
       );
       return sum + totals.balanceDue;
     }, 0);
+  }
 
-    return {
-      id: customer.id,
-      name: customer.name,
-      address: customer.address,
-      contact: customer.contact,
-      balance,
-    };
-  });
+  const rows = customers.map((customer) => ({
+    id: customer.id,
+    name: customer.name,
+    type: customer.type,
+    address: customer.address,
+    contact: customer.contact,
+    balance: docBalance(customer.invoices) + docBalance(customer.inquiries),
+  }));
 
   return (
     <main className={pageWrap}>
@@ -100,6 +113,7 @@ export default async function CustomersPage({
             <thead>
               <tr>
                 <th className={thClass}>Name</th>
+                <th className={thClass}>Type</th>
                 <th className={thClass}>Address</th>
                 <th className={thClass}>Contact</th>
                 {user.isMainAccount && <th className={thClass}>Balance</th>}
@@ -112,6 +126,13 @@ export default async function CustomersPage({
                     <Link href={`/customers/${row.id}`} className={link}>
                       {row.name}
                     </Link>
+                  </td>
+                  <td className={tdClass}>
+                    {row.type === "BUSINESS" ? (
+                      <span className={badgeClass("blue")}>Business</span>
+                    ) : (
+                      <span className={mutedText}>Individual</span>
+                    )}
                   </td>
                   <td className={tdClass}>{row.address || "—"}</td>
                   <td className={tdClass}>{row.contact || "—"}</td>

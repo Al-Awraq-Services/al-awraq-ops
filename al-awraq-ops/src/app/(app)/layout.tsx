@@ -37,6 +37,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           isMainAccount={user.isMainAccount}
           canViewInvoices={user.canViewInvoices}
           canViewCustomers={user.canViewCustomers}
+          canViewInquiries={user.canViewInquiries}
+          canViewPurchaseOrders={user.canViewPurchaseOrders}
         />
       </header>
       <div id="main-content" tabIndex={-1} className="flex-1 flex flex-col outline-none">
