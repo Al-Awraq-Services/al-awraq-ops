@@ -44,6 +44,29 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Fixed-width digits everywhere — an invoicing app full of prices and
+     totals should never have a "4" that's narrower than an "8"; numbers
+     in a table column or an animating stat tile stay visually steady. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visually hidden until focused — lets a keyboard user jump straight past
+   the header/nav to the page's actual content. */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 1rem;
+  z-index: 50;
+  background: #0a0a0a;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: top 0.15s ease-out;
+}
+.skip-link:focus {
+  top: 0;
 }
 
 ::selection {

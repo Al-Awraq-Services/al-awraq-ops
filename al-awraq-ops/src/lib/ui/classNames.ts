@@ -40,14 +40,18 @@ export const pageSubtitle = "text-sm text-neutral-500 mt-1";
 export const sectionTitle = "text-base font-semibold text-neutral-900 tracking-tight";
 export const mutedText = "text-sm text-neutral-500";
 
+// Shadows are tinted toward the brand blue (rgba(29,78,216,…)) rather than
+// flat black — a card on this page's slightly cool off-white background
+// should look like it's casting a shadow *of* that page, not a generic
+// black smudge borrowed from any other site.
 export const cardClass =
-  "rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_30px_-15px_rgba(0,0,0,0.12)]";
+  "rounded-2xl border border-blue-900/[0.06] bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03),0_10px_30px_-15px_rgba(29,78,216,0.12)]";
 
 // A clickable card (dashboard quick-links) — same surface, plus a hover
 // lift and a blue-tinted glow instead of the flat shadow, so it reads as
 // interactive before the cursor even reaches it.
 export const cardInteractiveClass =
-  "rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_30px_-15px_rgba(0,0,0,0.12)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_40px_-20px_rgba(29,78,216,0.35)]";
+  "rounded-2xl border border-blue-900/[0.06] bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03),0_10px_30px_-15px_rgba(29,78,216,0.12)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_1px_2px_rgba(15,23,42,0.03),0_20px_40px_-20px_rgba(29,78,216,0.35)]";
 
 // --- Buttons / action links ---
 
@@ -58,7 +62,7 @@ export const btnPrimarySm =
   "inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-700 px-4 py-1.5 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_2px_8px_-2px_rgba(5,150,105,0.5)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_6px_14px_-4px_rgba(5,150,105,0.55)] active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50";
 
 export const btnSecondary =
-  "inline-flex items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white px-5 py-2.5 text-sm font-semibold text-neutral-800 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-neutral-400 hover:bg-neutral-50 active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none";
+  "inline-flex items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white px-5 py-2.5 text-sm font-semibold text-neutral-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-neutral-400 hover:bg-neutral-50 active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none";
 
 // Text-style action links — used for inline table/detail actions instead of
 // a full button, kept visually light. `link` = routine action (blue),
@@ -85,14 +89,14 @@ export const navDangerLink =
 
 export const labelClass = "text-sm font-medium text-neutral-700";
 export const inputClass =
-  "block w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-neutral-900 shadow-sm transition-shadow duration-150 placeholder:text-neutral-400 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-600/10";
+  "block w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-neutral-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-shadow duration-150 placeholder:text-neutral-400 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-600/10";
 export const fieldWrap = "flex flex-col gap-1.5";
 export const errorText = "text-sm font-medium text-red-600";
 
 // --- Tables ---
 
 export const tableWrap =
-  "overflow-x-auto rounded-2xl border border-neutral-200/70 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_30px_-15px_rgba(0,0,0,0.12)]";
+  "overflow-x-auto rounded-2xl border border-blue-900/[0.06] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03),0_10px_30px_-15px_rgba(29,78,216,0.12)]";
 export const table = "w-full text-sm border-collapse";
 export const thClass =
   "py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 bg-neutral-50/80 border-b border-neutral-200/70";
@@ -124,7 +128,7 @@ export function badgeClass(tone: BadgeTone): string {
 
 export const statGrid = "grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4";
 export const statTile =
-  "rounded-2xl border border-neutral-200/70 bg-white px-4 py-3.5 sm:px-5 sm:py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_30px_-15px_rgba(0,0,0,0.12)]";
+  "rounded-2xl border border-blue-900/[0.06] bg-white px-4 py-3.5 sm:px-5 sm:py-4 shadow-[0_1px_2px_rgba(15,23,42,0.03),0_10px_30px_-15px_rgba(29,78,216,0.12)]";
 export const statLabel = "text-xs font-medium text-neutral-500";
 
 type StatTone = "blue" | "red" | "green" | "neutral";
@@ -135,6 +139,10 @@ const statValueTones: Record<StatTone, string> = {
   neutral: "text-neutral-950",
 };
 
+// text-xl rather than text-2xl at the base size — a 2-up mobile stat grid
+// (statGrid above) only gives each tile ~150px, and a money value like
+// "AED 12,480.00" at text-2xl wraps mid-figure on a phone. tabular-nums so
+// a column of these never visually jitters as the digits animate/update.
 export function statValueClass(tone: StatTone = "neutral"): string {
-  return `text-2xl font-bold tracking-tight ${statValueTones[tone]}`;
+  return `text-xl sm:text-2xl font-bold tracking-tight tabular-nums ${statValueTones[tone]}`;
 }

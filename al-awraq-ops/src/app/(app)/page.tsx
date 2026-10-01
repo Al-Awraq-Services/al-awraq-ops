@@ -13,7 +13,6 @@ import {
   pageTitle,
   pageSubtitle,
   sectionTitle,
-  statGrid,
   tableWrap,
   table,
   thClass,
@@ -133,7 +132,10 @@ export default async function DashboardPage() {
         <p className={pageSubtitle}>An overview of invoicing activity.</p>
       </div>
 
-      <div className={statGrid}>
+      {/* 4 tiles, not the shared 3-col statGrid (which leaves an orphaned
+          4th tile alone on its own row at the sm breakpoint) — 2-up on
+          mobile, a clean single row of 4 from md up. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <AnimatedStat
           label="Revenue collected"
           value={totalCollected}

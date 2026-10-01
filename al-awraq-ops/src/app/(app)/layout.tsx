@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   await requireAppSession();
 
   return (
-    <div className="flex min-h-screen flex-col bg-neutral-50">
+    <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-neutral-800/50 bg-neutral-950/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2.5">
@@ -32,7 +32,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         <NavLinks />
       </header>
-      <div className="flex-1 flex flex-col">{children}</div>
+      <div id="main-content" tabIndex={-1} className="flex-1 flex flex-col outline-none">
+        {children}
+      </div>
     </div>
   );
 }
