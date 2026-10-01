@@ -2,17 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireAppSessionForAction } from "@/lib/auth/appAuth";
-import { changePasswordAction } from "@/actions/authGate";
+import { requireMainAccountForAction } from "@/lib/auth/appAuth";
+import { changeMyPasswordAction } from "@/actions/authGate";
 import { parseBusinessProfileFormData } from "@/lib/validation/settings";
 
 export type SettingsActionState = { error?: string; success?: boolean } | undefined;
 
+/** Business details — main-account-only (see appAuth.ts, requireMainAccountForAction). */
 export async function updateBusinessProfileAction(
   _prevState: SettingsActionState,
   formData: FormData,
 ): Promise<SettingsActionState> {
-  await requireAppSessionForAction();
+  await requireMainAccountForAction();
 
   const parsed = parseBusinessProfileFormData(formData);
   if (!parsed.success) {
@@ -42,24 +43,20 @@ export async function updateBusinessProfileAction(
 
 export type PasswordActionState = { error?: string; success?: boolean } | undefined;
 
+/**
+ * Thin wrapper around authGate.ts's `changeMyPasswordAction` — every
+ * account (main or not) can change their own password this way. Only
+ * translates its `{error?}` result into this form's `{error?, success?}`
+ * shape so ChangePasswordForm's existing "Password updated" confirmation
+ * keeps working.
+ */
 export async function changePasswordFormAction(
-  _prevState: PasswordActionState,
+  prevState: PasswordActionState,
   formData: FormData,
 ): Promise<PasswordActionState> {
-  await requireAppSessionForAction();
-
-  const currentPassword = String(formData.get("currentPassword") ?? "");
-  const newPassword = String(formData.get("newPassword") ?? "");
-  const confirmNewPassword = String(formData.get("confirmNewPassword") ?? "");
-
-  if (newPassword !== confirmNewPassword) {
-    return { error: "Passwords do not match." };
-  }
-
-  const result = await changePasswordAction(currentPassword, newPassword);
-  if (result.error) {
+  const result = await changeMyPasswordAction(prevState, formData);
+  if (result?.error) {
     return { error: result.error };
   }
-
   return { success: true };
 }

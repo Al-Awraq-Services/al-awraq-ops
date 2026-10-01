@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { requirePermission } from "@/lib/auth/appAuth";
 import { createCustomerAction } from "@/actions/customers";
 import { CustomerForm } from "@/components/forms/CustomerForm";
 import { pageWrap, pageTitle, pageSubtitle, cardClass, link } from "@/lib/ui/classNames";
 
-export default function NewCustomerPage() {
+export default async function NewCustomerPage() {
+  await requirePermission("canManageCustomers");
+
   return (
     <main className={pageWrap}>
       <div>

@@ -1,5 +1,5 @@
 import { renderToBuffer } from "@react-pdf/renderer";
-import { hasValidAppSession } from "@/lib/auth/appAuth";
+import { getCurrentUser, userHasPermission } from "@/lib/auth/appAuth";
 import { db } from "@/lib/db";
 import {
   InvoiceDocument,
@@ -9,17 +9,22 @@ import {
 } from "@/lib/pdf/InvoiceDocument";
 
 /**
- * Serves a generated PDF for a single invoice. Covered by src/middleware.ts
+ * Serves a generated PDF for a single invoice. Covered by src/proxy.ts
  * (unauthenticated requests are redirected to /login before this handler
  * runs), but we re-check here as defense in depth — this is a file-download
- * endpoint, so an unauthenticated hit should get a 401, not a redirect.
+ * endpoint, so an unauthenticated or under-permissioned hit gets a 401/403,
+ * not a redirect.
  */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ invoiceId: string }> },
 ) {
-  if (!(await hasValidAppSession())) {
+  const user = await getCurrentUser();
+  if (!user) {
     return new Response("Unauthorized", { status: 401 });
+  }
+  if (!userHasPermission(user, "canViewInvoices")) {
+    return new Response("Forbidden", { status: 403 });
   }
 
   const { invoiceId } = await params;

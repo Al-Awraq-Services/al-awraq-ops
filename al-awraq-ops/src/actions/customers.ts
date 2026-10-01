@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireAppSessionForAction } from "@/lib/auth/appAuth";
+import { requirePermissionForAction } from "@/lib/auth/appAuth";
 import { parseCustomerFormData } from "@/lib/validation/customer";
 
 export type CustomerActionState = { error?: string } | undefined;
@@ -12,7 +12,7 @@ export async function createCustomerAction(
   _prevState: CustomerActionState,
   formData: FormData,
 ): Promise<CustomerActionState> {
-  await requireAppSessionForAction();
+  await requirePermissionForAction("canManageCustomers");
 
   const parsed = parseCustomerFormData(formData);
   if (!parsed.success) {
@@ -30,7 +30,7 @@ export async function updateCustomerAction(
   _prevState: CustomerActionState,
   formData: FormData,
 ): Promise<CustomerActionState> {
-  await requireAppSessionForAction();
+  await requirePermissionForAction("canManageCustomers");
 
   const parsed = parseCustomerFormData(formData);
   if (!parsed.success) {
@@ -52,7 +52,7 @@ export async function updateCustomerAction(
 export async function deleteCustomerAction(
   customerId: string,
 ): Promise<{ error?: string }> {
-  await requireAppSessionForAction();
+  await requirePermissionForAction("canManageCustomers");
 
   const invoiceCount = await db.invoice.count({ where: { customerId } });
   if (invoiceCount > 0) {

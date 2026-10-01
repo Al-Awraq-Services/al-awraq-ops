@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requirePermission } from "@/lib/auth/appAuth";
 import { computeInvoiceTotals, toNum } from "@/lib/invoiceMath";
 import {
   pageWrap,
@@ -22,6 +23,7 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  const user = await requirePermission("canViewCustomers");
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
 
@@ -68,9 +70,11 @@ export default async function CustomersPage({
           <h1 className={pageTitle}>Customers</h1>
           <p className={pageSubtitle}>Your address book — {customers.length} on file.</p>
         </div>
-        <Link href="/customers/new" className={btnPrimary}>
-          + New Customer
-        </Link>
+        {(user.isMainAccount || user.canManageCustomers) && (
+          <Link href="/customers/new" className={btnPrimary}>
+            + New Customer
+          </Link>
+        )}
       </div>
 
       <form className="flex max-w-sm gap-2" action="/customers" method="get">
@@ -98,7 +102,7 @@ export default async function CustomersPage({
                 <th className={thClass}>Name</th>
                 <th className={thClass}>Address</th>
                 <th className={thClass}>Contact</th>
-                <th className={thClass}>Balance</th>
+                {user.isMainAccount && <th className={thClass}>Balance</th>}
               </tr>
             </thead>
             <tbody>
@@ -111,15 +115,17 @@ export default async function CustomersPage({
                   </td>
                   <td className={tdClass}>{row.address || "—"}</td>
                   <td className={tdClass}>{row.contact || "—"}</td>
-                  <td className={tdClass}>
-                    {row.balance > 0 ? (
-                      <span className={badgeClass("red")}>
-                        AED {row.balance.toLocaleString("en-AE", { minimumFractionDigits: 2 })}
-                      </span>
-                    ) : (
-                      <span className={badgeClass("green")}>Settled</span>
-                    )}
-                  </td>
+                  {user.isMainAccount && (
+                    <td className={tdClass}>
+                      {row.balance > 0 ? (
+                        <span className={badgeClass("red")}>
+                          AED {row.balance.toLocaleString("en-AE", { minimumFractionDigits: 2 })}
+                        </span>
+                      ) : (
+                        <span className={badgeClass("green")}>Settled</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

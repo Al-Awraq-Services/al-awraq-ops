@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireMainAccount } from "@/lib/auth/appAuth";
 import { computeInvoiceTotals, toNum, formatMoney } from "@/lib/invoiceMath";
 import { AnimatedStat } from "@/components/dashboard/AnimatedStat";
 import {
@@ -28,6 +29,9 @@ function money(n: number): string {
 }
 
 export default async function DashboardPage() {
+  // Hard rule, not a toggle — see the User model comment in schema.prisma.
+  await requireMainAccount();
+
   const invoices = await db.invoice.findMany({
     include: { items: true, customer: { select: { id: true, name: true } } },
     orderBy: { invoiceDate: "desc" },

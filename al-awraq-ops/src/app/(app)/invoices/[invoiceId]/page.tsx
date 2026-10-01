@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { requirePermission } from "@/lib/auth/appAuth";
 import {
   toNum,
   formatMoney,
@@ -70,9 +71,12 @@ export default async function InvoiceDetailPage({
   params: Promise<{ invoiceId: string }>;
   searchParams: Promise<{ edit?: string }>;
 }) {
+  const user = await requirePermission("canViewInvoices");
+  const canManage = user.isMainAccount || user.canManageInvoices;
+
   const { invoiceId } = await params;
   const { edit } = await searchParams;
-  const isEditing = edit === "1";
+  const isEditing = edit === "1" && canManage;
 
   const invoice = await db.invoice.findUnique({
     where: { id: invoiceId },
@@ -102,26 +106,32 @@ export default async function InvoiceDetailPage({
 
   const totals = computeInvoiceTotals(plainItems, adjustments);
 
-  const otherInvoices = await db.invoice.findMany({
-    where: { customerId: invoice.customerId, id: { not: invoiceId } },
-    include: { items: true },
-  });
-  const previousBalance = computePreviousBalance(
-    otherInvoices.map((inv) => ({
-      items: inv.items.map((item) => ({
-        quantity: toNum(item.quantity),
-        unitPrice: toNum(item.unitPrice),
-        retentionAmount: item.retentionAmount ? toNum(item.retentionAmount) : null,
+  // Previous balance is an aggregate rollup across this customer's other
+  // invoices — never shown to a non-main account (see the User model
+  // comment in schema.prisma), so skip the extra query entirely for them.
+  let previousBalance = 0;
+  if (user.isMainAccount) {
+    const otherInvoices = await db.invoice.findMany({
+      where: { customerId: invoice.customerId, id: { not: invoiceId } },
+      include: { items: true },
+    });
+    previousBalance = computePreviousBalance(
+      otherInvoices.map((inv) => ({
+        items: inv.items.map((item) => ({
+          quantity: toNum(item.quantity),
+          unitPrice: toNum(item.unitPrice),
+          retentionAmount: item.retentionAmount ? toNum(item.retentionAmount) : null,
+        })),
+        adjustments: {
+          taxRatePercent: toNum(inv.taxRatePercent),
+          discountAmount: inv.discountAmount ? toNum(inv.discountAmount) : null,
+          shipmentAmount: inv.shipmentAmount ? toNum(inv.shipmentAmount) : null,
+          stampDutyAmount: inv.stampDutyAmount ? toNum(inv.stampDutyAmount) : null,
+          amountPaid: toNum(inv.amountPaid),
+        },
       })),
-      adjustments: {
-        taxRatePercent: toNum(inv.taxRatePercent),
-        discountAmount: inv.discountAmount ? toNum(inv.discountAmount) : null,
-        shipmentAmount: inv.shipmentAmount ? toNum(inv.shipmentAmount) : null,
-        stampDutyAmount: inv.stampDutyAmount ? toNum(inv.stampDutyAmount) : null,
-        amountPaid: toNum(inv.amountPaid),
-      },
-    })),
-  );
+    );
+  }
 
   const customers = await db.customer.findMany({ orderBy: { name: "asc" } });
   const plainCustomers = customers.map((c) => ({
@@ -176,12 +186,14 @@ export default async function InvoiceDetailPage({
           >
             Download PDF
           </a>
-          <Link
-            href={isEditing ? `/invoices/${invoice.id}` : `/invoices/${invoice.id}?edit=1`}
-            className={btnSecondary}
-          >
-            {isEditing ? "Cancel edit" : "Edit"}
-          </Link>
+          {canManage && (
+            <Link
+              href={isEditing ? `/invoices/${invoice.id}` : `/invoices/${invoice.id}?edit=1`}
+              className={btnSecondary}
+            >
+              {isEditing ? "Cancel edit" : "Edit"}
+            </Link>
+          )}
         </div>
       </div>
 
@@ -197,12 +209,14 @@ export default async function InvoiceDetailPage({
       ) : (
         <>
           <div className={statGrid}>
-            <div className={statTile}>
-              <div className={statLabel}>Previous balance</div>
-              <div className={statValueClass(previousBalance > 0 ? "red" : "neutral")}>
-                AED {formatMoney(previousBalance)}
+            {user.isMainAccount && (
+              <div className={statTile}>
+                <div className={statLabel}>Previous balance</div>
+                <div className={statValueClass(previousBalance > 0 ? "red" : "neutral")}>
+                  AED {formatMoney(previousBalance)}
+                </div>
               </div>
-            </div>
+            )}
             <div className={statTile}>
               <div className={statLabel}>Total</div>
               <div className={statValueClass()}>AED {formatMoney(totals.grandTotal)}</div>
@@ -334,10 +348,12 @@ export default async function InvoiceDetailPage({
                   <dt>Total</dt>
                   <dd>AED {formatMoney(totals.grandTotal)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className={mutedText}>Previous balance</dt>
-                  <dd>AED {formatMoney(previousBalance)}</dd>
-                </div>
+                {user.isMainAccount && (
+                  <div className="flex justify-between">
+                    <dt className={mutedText}>Previous balance</dt>
+                    <dd>AED {formatMoney(previousBalance)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <dt className={mutedText}>Paid</dt>
                   <dd>AED {formatMoney(totals.amountPaid)}</dd>
@@ -350,46 +366,48 @@ export default async function InvoiceDetailPage({
               {invoice.notes && <p className={`${mutedText} mt-3`}>{invoice.notes}</p>}
             </div>
 
-            <div className={cardClass}>
-              <h2 className={`${sectionTitle} mb-3`}>Payment</h2>
-              <form
-                action={submitPayment.bind(null, invoice.id)}
-                className="flex flex-wrap items-end gap-2"
-              >
-                <div className={`flex flex-col gap-1.5`}>
-                  <label className="text-sm font-medium text-neutral-700" htmlFor="amountPaid">
-                    Amount paid
-                  </label>
-                  <input
-                    id="amountPaid"
-                    name="amountPaid"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    defaultValue={totals.amountPaid}
-                    className={`${inputClass} w-36`}
-                  />
-                </div>
-                <button type="submit" className={btnSecondary}>
-                  Record payment
-                </button>
-              </form>
-              <form action={submitPayment.bind(null, invoice.id)} className="mt-2">
-                <input type="hidden" name="amountPaid" value={totals.grandTotal} />
-                <button type="submit" className={btnSecondary}>
-                  Mark paid in full
-                </button>
-              </form>
-
-              <div className="mt-6 border-t border-neutral-200 pt-4">
-                <h3 className="mb-2 text-sm font-semibold text-neutral-900">Danger zone</h3>
-                <form action={deleteInvoiceAction.bind(null, invoice.id)}>
-                  <button type="submit" className={linkDanger}>
-                    Delete invoice
+            {canManage && (
+              <div className={cardClass}>
+                <h2 className={`${sectionTitle} mb-3`}>Payment</h2>
+                <form
+                  action={submitPayment.bind(null, invoice.id)}
+                  className="flex flex-wrap items-end gap-2"
+                >
+                  <div className={`flex flex-col gap-1.5`}>
+                    <label className="text-sm font-medium text-neutral-700" htmlFor="amountPaid">
+                      Amount paid
+                    </label>
+                    <input
+                      id="amountPaid"
+                      name="amountPaid"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      defaultValue={totals.amountPaid}
+                      className={`${inputClass} w-36`}
+                    />
+                  </div>
+                  <button type="submit" className={btnSecondary}>
+                    Record payment
                   </button>
                 </form>
+                <form action={submitPayment.bind(null, invoice.id)} className="mt-2">
+                  <input type="hidden" name="amountPaid" value={totals.grandTotal} />
+                  <button type="submit" className={btnSecondary}>
+                    Mark paid in full
+                  </button>
+                </form>
+
+                <div className="mt-6 border-t border-neutral-200 pt-4">
+                  <h3 className="mb-2 text-sm font-semibold text-neutral-900">Danger zone</h3>
+                  <form action={deleteInvoiceAction.bind(null, invoice.id)}>
+                    <button type="submit" className={linkDanger}>
+                      Delete invoice
+                    </button>
+                  </form>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </>
       )}

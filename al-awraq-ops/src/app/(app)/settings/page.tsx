@@ -1,11 +1,15 @@
 import { db } from "@/lib/db";
+import { requireUser } from "@/lib/auth/appAuth";
 import { toNum } from "@/lib/invoiceMath";
 import { BusinessProfileForm } from "./BusinessProfileForm";
 import { ChangePasswordForm } from "./ChangePasswordForm";
 import { pageWrap, pageTitle, pageSubtitle, sectionTitle, cardClass } from "@/lib/ui/classNames";
 
 export default async function SettingsPage() {
-  const profile = await db.businessProfile.findUnique({ where: { id: "singleton" } });
+  const user = await requireUser();
+  const profile = user.isMainAccount
+    ? await db.businessProfile.findUnique({ where: { id: "singleton" } })
+    : null;
 
   const defaultValues = {
     legalName: profile?.legalName ?? "",
@@ -27,10 +31,12 @@ export default async function SettingsPage() {
         <p className={pageSubtitle}>Business details, invoicing defaults, and account security.</p>
       </div>
 
-      <div className={`${cardClass} max-w-2xl`}>
-        <h2 className={`${sectionTitle} mb-4`}>Business details</h2>
-        <BusinessProfileForm defaultValues={defaultValues} />
-      </div>
+      {user.isMainAccount && (
+        <div className={`${cardClass} max-w-2xl`}>
+          <h2 className={`${sectionTitle} mb-4`}>Business details</h2>
+          <BusinessProfileForm defaultValues={defaultValues} />
+        </div>
+      )}
 
       <div className={`${cardClass} max-w-2xl`}>
         <h2 className={`${sectionTitle} mb-4`}>Change password</h2>

@@ -52,14 +52,40 @@ model BusinessProfile {
   /// Zero-padded width, e.g. 5 -> "01064". Matches the sample invoice.
   invoiceNumberPadding Int   @default(5)
 
-  /// Null until the app's one-time "set your password" screen is
-  /// completed — see src/lib/auth/appAuth.ts. Never plaintext.
-  passwordHash String?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("business_profile")
+}
+
+/// Multi-account pass (2026-10-01): replaces the single shared app
+/// password with real per-account logins. Exactly one row ever has
+/// `isMainAccount: true` — created by the seed script, never by the Users
+/// screen — and that flag is the one hard-coded rule in this app that is
+/// NOT a togglable permission: only the main account ever sees the
+/// Dashboard or any aggregate money figure (see src/lib/auth/appAuth.ts
+/// `requireMainAccount` and the money-hiding checks scattered through the
+/// invoices/customers pages). The four `can…` flags below are the
+/// per-section view/manage toggles the main account sets when creating or
+/// editing any other account (src/app/(app)/users) — the main account
+/// itself bypasses these checks entirely rather than needing them true.
+model User {
+  id           String  @id @default(cuid())
+  name         String
+  /// Login handle — not an email, no email flows exist in this app.
+  username     String  @unique
+  passwordHash String
+  isMainAccount Boolean @default(false)
+
+  canViewInvoices    Boolean @default(false)
+  canManageInvoices  Boolean @default(false)
+  canViewCustomers   Boolean @default(false)
+  canManageCustomers Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
 }
 
 /// A lightweight address book — not an account, never signs in. Exists

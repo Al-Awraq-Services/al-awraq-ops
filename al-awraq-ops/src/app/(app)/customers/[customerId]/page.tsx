@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { requirePermission } from "@/lib/auth/appAuth";
 import { updateCustomerAction } from "@/actions/customers";
 import { CustomerForm } from "@/components/forms/CustomerForm";
 import { DeleteCustomerButton } from "@/components/forms/DeleteCustomerButton";
@@ -30,6 +31,8 @@ export default async function CustomerDetailPage({
 }: {
   params: Promise<{ customerId: string }>;
 }) {
+  const user = await requirePermission("canViewCustomers");
+  const canManage = user.isMainAccount || user.canManageCustomers;
   const { customerId } = await params;
 
   const customer = await db.customer.findUnique({
@@ -98,27 +101,54 @@ export default async function CustomerDetailPage({
           <div className={statLabel}>Invoices</div>
           <div className={statValueClass()}>{invoiceRows.length}</div>
         </div>
-        <div className={statTile}>
-          <div className={statLabel}>Outstanding balance</div>
-          <div className={statValueClass(totalBalance > 0 ? "red" : "green")}>
-            AED {formatMoney(totalBalance)}
+        {user.isMainAccount && (
+          <div className={statTile}>
+            <div className={statLabel}>Outstanding balance</div>
+            <div className={statValueClass(totalBalance > 0 ? "red" : "green")}>
+              AED {formatMoney(totalBalance)}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className={`${cardClass} max-w-xl`}>
         <h2 className={`${sectionTitle} mb-4`}>Details</h2>
-        <CustomerForm
-          mode="edit"
-          action={updateCustomerAction.bind(null, customer.id)}
-          defaultValues={{
-            name: customer.name,
-            address: customer.address ?? "",
-            contact: customer.contact ?? "",
-            email: customer.email ?? "",
-            notes: customer.notes ?? "",
-          }}
-        />
+        {canManage ? (
+          <CustomerForm
+            mode="edit"
+            action={updateCustomerAction.bind(null, customer.id)}
+            defaultValues={{
+              name: customer.name,
+              address: customer.address ?? "",
+              contact: customer.contact ?? "",
+              email: customer.email ?? "",
+              notes: customer.notes ?? "",
+            }}
+          />
+        ) : (
+          <dl className="flex flex-col gap-2 text-sm">
+            <div>
+              <dt className={mutedText}>Address</dt>
+              <dd>{customer.address || "—"}</dd>
+            </div>
+            <div>
+              <dt className={mutedText}>Contact</dt>
+              <dd>{customer.contact || "—"}</dd>
+            </div>
+            {customer.email && (
+              <div>
+                <dt className={mutedText}>Email</dt>
+                <dd>{customer.email}</dd>
+              </div>
+            )}
+            {customer.notes && (
+              <div>
+                <dt className={mutedText}>Notes</dt>
+                <dd>{customer.notes}</dd>
+              </div>
+            )}
+          </dl>
+        )}
       </div>
 
       <div>
@@ -165,13 +195,15 @@ export default async function CustomerDetailPage({
         )}
       </div>
 
-      <div className={cardClass}>
-        <h2 className={`${sectionTitle} mb-3`}>Danger zone</h2>
-        <p className={`${mutedText} mb-3`}>
-          A customer with existing invoices cannot be deleted.
-        </p>
-        <DeleteCustomerButton customerId={customer.id} />
-      </div>
+      {canManage && (
+        <div className={cardClass}>
+          <h2 className={`${sectionTitle} mb-3`}>Danger zone</h2>
+          <p className={`${mutedText} mb-3`}>
+            A customer with existing invoices cannot be deleted.
+          </p>
+          <DeleteCustomerButton customerId={customer.id} />
+        </div>
+      )}
     </main>
   );
 }

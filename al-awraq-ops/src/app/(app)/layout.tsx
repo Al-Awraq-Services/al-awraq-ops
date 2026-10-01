@@ -1,12 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { requireAppSession } from "@/lib/auth/appAuth";
+import { requireUser } from "@/lib/auth/appAuth";
 import { logoutAction } from "@/actions/authGate";
 import { NavLinks } from "@/components/ui/NavLinks";
 import { navDangerLink } from "@/lib/ui/classNames";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  await requireAppSession();
+  const user = await requireUser();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -24,13 +24,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               Al Awraq Services · Invoicing
             </span>
           </Link>
-          <form action={logoutAction}>
-            <button type="submit" className={navDangerLink}>
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <span className="hidden text-xs text-neutral-400 sm:inline">{user.name}</span>
+            <form action={logoutAction}>
+              <button type="submit" className={navDangerLink}>
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
-        <NavLinks />
+        <NavLinks
+          isMainAccount={user.isMainAccount}
+          canViewInvoices={user.canViewInvoices}
+          canViewCustomers={user.canViewCustomers}
+        />
       </header>
       <div id="main-content" tabIndex={-1} className="flex-1 flex flex-col outline-none">
         {children}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requirePermission } from "@/lib/auth/appAuth";
 import { computeInvoiceTotals, toNum, formatMoney } from "@/lib/invoiceMath";
 import {
   pageWrap,
@@ -32,6 +33,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  const user = await requirePermission("canViewInvoices");
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
 
@@ -94,26 +96,38 @@ export default async function InvoicesPage({
           <h1 className={pageTitle}>Invoices</h1>
           <p className={pageSubtitle}>{invoices.length} on file.</p>
         </div>
-        <Link href="/invoices/new" className={btnPrimary}>
-          + New Invoice
-        </Link>
+        {(user.isMainAccount || user.canManageInvoices) && (
+          <Link href="/invoices/new" className={btnPrimary}>
+            + New Invoice
+          </Link>
+        )}
       </div>
 
+      {/* Outstanding balance / Paid this month are aggregate rollups — the
+          "how much have I made" figures the private sub-account is never
+          shown (see the User model comment in schema.prisma). The
+          per-invoice Total/Balance columns in the table below stay
+          visible for everyone who can view invoices at all — that's the
+          actual operational data needed to do the job. */}
       <div className={statGrid}>
         <div className={statTile}>
           <div className={statLabel}>Invoices</div>
           <div className={statValueClass()}>{invoices.length}</div>
         </div>
-        <div className={statTile}>
-          <div className={statLabel}>Outstanding balance</div>
-          <div className={statValueClass(totalOutstanding > 0 ? "red" : "green")}>
-            AED {formatMoney(totalOutstanding)}
-          </div>
-        </div>
-        <div className={statTile}>
-          <div className={statLabel}>Paid this month</div>
-          <div className={statValueClass("green")}>AED {formatMoney(totalPaidThisMonth)}</div>
-        </div>
+        {user.isMainAccount && (
+          <>
+            <div className={statTile}>
+              <div className={statLabel}>Outstanding balance</div>
+              <div className={statValueClass(totalOutstanding > 0 ? "red" : "green")}>
+                AED {formatMoney(totalOutstanding)}
+              </div>
+            </div>
+            <div className={statTile}>
+              <div className={statLabel}>Paid this month</div>
+              <div className={statValueClass("green")}>AED {formatMoney(totalPaidThisMonth)}</div>
+            </div>
+          </>
+        )}
       </div>
 
       <form className="flex max-w-sm gap-2" action="/invoices" method="get">

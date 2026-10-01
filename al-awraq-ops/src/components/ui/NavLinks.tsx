@@ -7,22 +7,38 @@ import {
   Receipt,
   Users,
   Settings as SettingsIcon,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
-const items: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/invoices", label: "Invoices", icon: Receipt },
-  { href: "/customers", label: "Customers", icon: Users },
-  { href: "/settings", label: "Settings", icon: SettingsIcon },
-];
+export type NavPermissions = {
+  isMainAccount: boolean;
+  canViewInvoices: boolean;
+  canViewCustomers: boolean;
+};
 
 /** Active-page nav highlighting. Isolated here (needs usePathname) so the
- * surrounding header/layout can stay a Server Component. */
-export function NavLinks() {
+ * surrounding header/layout can stay a Server Component. Only renders the
+ * links this account can actually use — Dashboard and Users are always
+ * main-account-only (a hard rule, not a toggle; see appAuth.ts), Invoices/
+ * Customers depend on that account's own canView… flags (main always
+ * passes, same as every server-side guard). */
+export function NavLinks({ isMainAccount, canViewInvoices, canViewCustomers }: NavPermissions) {
   const pathname = usePathname();
+
+  const items: NavItem[] = [
+    ...(isMainAccount ? [{ href: "/", label: "Dashboard", icon: LayoutDashboard }] : []),
+    ...(isMainAccount || canViewInvoices
+      ? [{ href: "/invoices", label: "Invoices", icon: Receipt }]
+      : []),
+    ...(isMainAccount || canViewCustomers
+      ? [{ href: "/customers", label: "Customers", icon: Users }]
+      : []),
+    { href: "/settings", label: "Settings", icon: SettingsIcon },
+    ...(isMainAccount ? [{ href: "/users", label: "Users", icon: UserCog }] : []),
+  ];
 
   return (
     <nav className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-0.5">

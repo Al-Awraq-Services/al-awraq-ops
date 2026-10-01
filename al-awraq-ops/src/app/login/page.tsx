@@ -1,12 +1,12 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { hasValidAppSession } from "@/lib/auth/appAuth";
+import { getCurrentUser } from "@/lib/auth/appAuth";
 import { LoginForm } from "@/components/forms/LoginForm";
 import { cardClass } from "@/lib/ui/classNames";
 
 export default async function LoginPage() {
-  if (await hasValidAppSession()) {
+  if (await getCurrentUser()) {
     redirect("/");
   }
 
@@ -34,7 +34,7 @@ export default async function LoginPage() {
             <p className="text-sm text-neutral-500">Invoicing</p>
           </div>
         </div>
-        <LoginForm hasPassword={Boolean(profile?.passwordHash)} />
+        <LoginForm />
       </div>
     </main>
   );

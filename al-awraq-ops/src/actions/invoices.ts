@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { requireAppSessionForAction } from "@/lib/auth/appAuth";
+import { requirePermissionForAction } from "@/lib/auth/appAuth";
 import { parseInvoiceFormData, type InvoiceFormInput } from "@/lib/validation/invoice";
 
 export type InvoiceActionState = { error?: string } | undefined;
@@ -71,7 +71,7 @@ export async function createInvoiceAction(
   _prevState: InvoiceActionState,
   formData: FormData,
 ): Promise<InvoiceActionState> {
-  await requireAppSessionForAction();
+  await requirePermissionForAction("canManageInvoices");
 
   const parsed = parseInvoiceFormData(formData);
   if (!parsed.success) {
@@ -131,7 +131,7 @@ export async function updateInvoiceAction(
   _prevState: InvoiceActionState,
   formData: FormData,
 ): Promise<InvoiceActionState> {
-  await requireAppSessionForAction();
+  await requirePermissionForAction("canManageInvoices");
 
   const parsed = parseInvoiceFormData(formData);
   if (!parsed.success) {
@@ -217,7 +217,7 @@ export async function recordPaymentAction(
   invoiceId: string,
   formData: FormData,
 ): Promise<InvoiceActionState> {
-  await requireAppSessionForAction();
+  await requirePermissionForAction("canManageInvoices");
 
   const raw = formData.get("amountPaid");
   const amountPaid = Number(raw);
@@ -242,7 +242,7 @@ export async function recordPaymentAction(
  * tool (used to correct mistakes). InvoiceItem rows cascade per schema.
  */
 export async function deleteInvoiceAction(invoiceId: string): Promise<void> {
-  await requireAppSessionForAction();
+  await requirePermissionForAction("canManageInvoices");
 
   await db.invoice.delete({ where: { id: invoiceId } });
 

@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requirePermission } from "@/lib/auth/appAuth";
 import { toNum, nextInvoiceDisplayNumber } from "@/lib/invoiceMath";
 import { createInvoiceAction } from "@/actions/invoices";
 import { InvoiceForm } from "@/components/forms/InvoiceForm";
 import { pageWrap, pageTitle, pageSubtitle, link } from "@/lib/ui/classNames";
 
 export default async function NewInvoicePage() {
+  await requirePermission("canManageInvoices");
+
   const [customers, profile] = await Promise.all([
     db.customer.findMany({ orderBy: { name: "asc" } }),
     db.businessProfile.findUnique({ where: { id: "singleton" } }),

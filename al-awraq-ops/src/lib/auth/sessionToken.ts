@@ -1,16 +1,17 @@
 /**
- * Stateless, signed session-token math for the single-password app gate.
+ * Stateless, signed session-token math for the per-account login (see
+ * prisma/schema.prisma `User`).
  *
  * Deliberately edge-runtime-safe (Web Crypto only, no `node:crypto`, no
  * `next/headers`) so the exact same verification logic runs in both
- * `middleware.ts` (Edge runtime) and `src/lib/auth/appAuth.ts` (Node
+ * `src/proxy.ts` (Edge runtime) and `src/lib/auth/appAuth.ts` (Node
  * runtime, Server Components/Actions) without duplication or drift.
  *
- * There is no session table — the token itself is a signed
- * `expiresAt.hmac` pair. A stolen/expired cookie can't be extended (the
- * expiry is inside the signed payload), and there's nothing to look up or
- * invalidate server-side (acceptable for a single-owner app with one
- * shared password; see docs/SECURITY_BASELINE.md for the tradeoff).
+ * There is no session table — the token is a signed `userId.expiresAt.hmac`
+ * triple. The edge proxy can confirm a token is validly signed and
+ * unexpired without a DB round-trip; only Server Components/Actions (which
+ * *can* reach the database) resolve the `userId` into an actual `User` row
+ * and check that account's permissions — see appAuth.ts.
  */
 
 function bufToHex(buf: ArrayBuffer): string {
@@ -51,22 +52,30 @@ function getSecret(): string {
   return secret;
 }
 
-export async function signSessionToken(lifetimeMs: number): Promise<string> {
+// userId (cuid) never contains ".", so splitting the token on "." is safe.
+export async function signSessionToken(
+  userId: string,
+  lifetimeMs: number,
+): Promise<string> {
   const expiresAt = Date.now() + lifetimeMs;
-  const mac = await hmacHex(getSecret(), String(expiresAt));
-  return `${expiresAt}.${mac}`;
+  const payload = `${userId}.${expiresAt}`;
+  const mac = await hmacHex(getSecret(), payload);
+  return `${payload}.${mac}`;
 }
 
 export async function verifySessionToken(
   token: string | undefined | null,
-): Promise<boolean> {
-  if (!token) return false;
-  const [expiresAtRaw, mac] = token.split(".");
-  if (!expiresAtRaw || !mac) return false;
+): Promise<{ userId: string } | null> {
+  if (!token) return null;
+  const [userId, expiresAtRaw, mac] = token.split(".");
+  if (!userId || !expiresAtRaw || !mac) return null;
 
   const expiresAt = Number(expiresAtRaw);
-  if (!Number.isFinite(expiresAt) || expiresAt < Date.now()) return false;
+  if (!Number.isFinite(expiresAt) || expiresAt < Date.now()) return null;
 
-  const expectedMac = await hmacHex(getSecret(), expiresAtRaw);
-  return timingSafeEqualHex(mac, expectedMac);
+  const payload = `${userId}.${expiresAtRaw}`;
+  const expectedMac = await hmacHex(getSecret(), payload);
+  if (!timingSafeEqualHex(mac, expectedMac)) return null;
+
+  return { userId };
 }
