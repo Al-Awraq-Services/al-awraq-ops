@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/auth/appAuth";
 import { toNum, nextInvoiceDisplayNumber } from "@/lib/invoiceMath";
 import { createInquiryAction } from "@/actions/inquiries";
 import { InquiryForm } from "@/components/forms/InquiryForm";
-import { pageWrap, pageTitle, pageSubtitle, link } from "@/lib/ui/classNames";
+import { pageWrap, pageHeader, pageTitle, pageSubtitle, backLink } from "@/lib/ui/classNames";
 
 export default async function NewInquiryPage() {
   await requirePermission("canManageInquiries");
@@ -37,11 +37,17 @@ export default async function NewInquiryPage() {
   return (
     <main className={pageWrap}>
       <div>
-        <Link href="/inquiries" className={link}>
-          ← Back to inquiries
+        <Link href="/inquiries" className={backLink}>
+          ← Inquiries
         </Link>
-        <h1 className={`${pageTitle} mt-2`}>New inquiry</h1>
-        <p className={pageSubtitle}>Fill in the details below to create a new inquiry.</p>
+        <div className={`${pageHeader} mt-4`}>
+          <div>
+            <h1 className={pageTitle}>New inquiry</h1>
+            <p className={pageSubtitle}>
+              Will be numbered {nextInquiryNumberDisplay} unless you change it.
+            </p>
+          </div>
+        </div>
       </div>
 
       <InquiryForm

@@ -1,86 +1,51 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
-import { cardClass, sectionTitle, mutedText } from "@/lib/ui/classNames";
+import { cardClass, sectionTitle, hintText, emptyState } from "@/lib/ui/classNames";
 import { formatMoney } from "@/lib/invoiceMath";
 
 export type TopCustomer = { name: string; revenue: number };
 
-const barColors = ["#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd"];
-
-function formatAxisValue(value: number): string {
-  if (value >= 1000) return `${Math.round(value / 1000)}k`;
-  return `${value}`;
-}
-
+/**
+ * Ranked list with a thin proportional rule under each row — names stay
+ * fully readable (the earlier horizontal bar chart truncated them to a
+ * 110px axis) and exact figures are visible without hovering.
+ */
 export function TopCustomersChart({ data }: { data: TopCustomer[] }) {
+  const max = data.reduce((m, c) => Math.max(m, c.revenue), 0);
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
+    <motion.section
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.14 }}
       className={cardClass}
     >
-      <h2 className={`${sectionTitle} mb-4`}>Top customers</h2>
+      <h2 className={sectionTitle}>Top customers</h2>
+      <p className={`${hintText} mt-0.5`}>By total invoiced, all time</p>
       {data.length === 0 ? (
-        <p className={mutedText}>No customer revenue yet.</p>
+        <div className={`${emptyState} mt-5`}>No customer revenue yet.</div>
       ) : (
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              layout="vertical"
-              margin={{ top: 8, right: 24, left: 8, bottom: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-              <XAxis
-                type="number"
-                tick={{ fontSize: 12, fill: "#6b7280" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={formatAxisValue}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={110}
-                tick={{ fontSize: 12, fill: "#374151" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                formatter={(value) => `AED ${formatMoney(Number(value))}`}
-                contentStyle={{
-                  borderRadius: 12,
-                  border: "1px solid #e5e7eb",
-                  boxShadow: "0 10px 30px -15px rgba(0,0,0,0.2)",
-                }}
-              />
-              <Bar
-                dataKey="revenue"
-                radius={[0, 8, 8, 0]}
-                isAnimationActive
-                animationDuration={1100}
-                animationEasing="ease-out"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={entry.name} fill={barColors[index % barColors.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <ol className="mt-4 flex flex-col">
+          {data.map((customer, index) => (
+            <li key={customer.name} className="border-b border-line/70 py-3 last:border-b-0">
+              <div className="flex items-baseline gap-3 text-sm">
+                <span className="w-4 shrink-0 text-[12px] text-faint tabular-nums">{index + 1}</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-ink">{customer.name}</span>
+                <span className="shrink-0 text-ink-2 tabular-nums">AED {formatMoney(customer.revenue)}</span>
+              </div>
+              <div className="mt-2 ml-7 h-[3px] rounded-full bg-surface-3">
+                <motion.div
+                  className="h-full rounded-full bg-brand/70"
+                  initial={{ width: 0 }}
+                  animate={{ width: max > 0 ? `${(customer.revenue / max) * 100}%` : 0 }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 + index * 0.05 }}
+                />
+              </div>
+            </li>
+          ))}
+        </ol>
       )}
-    </motion.div>
+    </motion.section>
   );
 }

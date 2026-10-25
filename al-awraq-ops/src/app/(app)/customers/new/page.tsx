@@ -2,21 +2,32 @@ import Link from "next/link";
 import { requirePermission } from "@/lib/auth/appAuth";
 import { createCustomerAction } from "@/actions/customers";
 import { CustomerForm } from "@/components/forms/CustomerForm";
-import { pageWrap, pageTitle, pageSubtitle, cardClass, link } from "@/lib/ui/classNames";
+import {
+  pageWrap,
+  pageHeader,
+  pageTitle,
+  pageSubtitle,
+  backLink,
+  cardClass,
+} from "@/lib/ui/classNames";
 
 export default async function NewCustomerPage() {
   await requirePermission("canManageCustomers");
 
   return (
     <main className={pageWrap}>
-      <div>
-        <Link href="/customers" className={link}>
-          ← Back to customers
+      <div className="flex flex-col gap-4">
+        <Link href="/customers" className={`${backLink} self-start`}>
+          ← Customers
         </Link>
-        <h1 className={`${pageTitle} mt-2`}>New Customer</h1>
-        <p className={pageSubtitle}>Add a customer to the address book.</p>
+        <div className={pageHeader}>
+          <div>
+            <h1 className={pageTitle}>New customer</h1>
+            <p className={pageSubtitle}>Add a customer to the address book.</p>
+          </div>
+        </div>
       </div>
-      <div className={`${cardClass} max-w-xl`}>
+      <div className={`${cardClass} max-w-2xl`}>
         <CustomerForm mode="create" action={createCustomerAction} />
       </div>
     </main>

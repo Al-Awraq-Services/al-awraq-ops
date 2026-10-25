@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/auth/appAuth";
 import { toNum, nextInvoiceDisplayNumber } from "@/lib/invoiceMath";
 import { createPurchaseOrderAction } from "@/actions/purchaseOrders";
 import { PurchaseOrderForm } from "@/components/forms/PurchaseOrderForm";
-import { pageWrap, pageTitle, pageSubtitle, link } from "@/lib/ui/classNames";
+import { pageWrap, pageHeader, pageTitle, pageSubtitle, backLink } from "@/lib/ui/classNames";
 
 export default async function NewPurchaseOrderPage() {
   await requirePermission("canManagePurchaseOrders");
@@ -31,11 +31,17 @@ export default async function NewPurchaseOrderPage() {
   return (
     <main className={pageWrap}>
       <div>
-        <Link href="/purchase-orders" className={link}>
-          ← Back to purchase orders
+        <Link href="/purchase-orders" className={backLink}>
+          ← Purchase orders
         </Link>
-        <h1 className={`${pageTitle} mt-2`}>New purchase order</h1>
-        <p className={pageSubtitle}>Fill in the details below to create a new purchase order.</p>
+        <div className={`${pageHeader} mt-4`}>
+          <div>
+            <h1 className={pageTitle}>New purchase order</h1>
+            <p className={pageSubtitle}>
+              Will be numbered {nextPoNumberDisplay} unless you change it.
+            </p>
+          </div>
+        </div>
       </div>
 
       <PurchaseOrderForm

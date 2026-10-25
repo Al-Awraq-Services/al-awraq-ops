@@ -39,8 +39,12 @@ export function LoginForm() {
           className={inputClass}
         />
       </div>
-      {state?.error && <p className={errorText}>{state.error}</p>}
-      <button type="submit" disabled={pending} className={btnPrimary}>
+      {state?.error && (
+        <p role="alert" className={errorText}>
+          {state.error}
+        </p>
+      )}
+      <button type="submit" disabled={pending} className={`${btnPrimary} mt-2 h-10 w-full`}>
         {pending ? "Signing in…" : "Sign in"}
       </button>
     </form>

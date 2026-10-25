@@ -1,32 +1,29 @@
-import Image from "next/image";
 import Link from "next/link";
-import { cardClass, btnPrimary, mutedText } from "@/lib/ui/classNames";
+import { BrandMark } from "@/components/ui/BrandMark";
+import { btnSecondary, mutedText } from "@/lib/ui/classNames";
 
 export default function NotFound() {
   return (
-    <main
-      id="main-content"
-      className="flex min-h-screen flex-col items-center justify-center px-4 py-10"
-    >
-      <div className={`${cardClass} flex w-full max-w-sm flex-col items-center gap-4 text-center`}>
-        <Image
-          src="/logo.jpg"
-          alt="Al Awraq Services"
-          width={72}
-          height={64}
-          className="h-14 w-auto opacity-80"
-        />
-        <div>
-          <p className="text-sm font-semibold text-blue-700">404</p>
-          <h1 className="mt-1 text-lg font-bold text-neutral-950">Page not found</h1>
-          <p className={`${mutedText} mt-1`}>
-            There&apos;s nothing at this address — it may have been moved or the
-            link was mistyped.
+    <main id="main-content" className="flex min-h-dvh flex-col px-6 py-10 sm:px-12">
+      <Link href="/" className="flex items-center gap-3 self-start" aria-label="Al Awraq Services — home">
+        <BrandMark height={22} />
+        <span className="font-display text-[17px] leading-none text-ink">Al Awraq</span>
+      </Link>
+      <div className="flex flex-1 flex-col justify-center">
+        <div className="max-w-md">
+          <p className="font-display text-[5.5rem] font-light leading-none tracking-[-0.03em] text-line-strong figures">
+            404
           </p>
+          <h1 className="mt-6 font-display text-[2rem] leading-[1.1] tracking-[-0.015em] text-ink">
+            This page doesn&apos;t exist
+          </h1>
+          <p className={`${mutedText} mt-3`}>
+            The link may be mistyped, or the record it pointed to was deleted.
+          </p>
+          <Link href="/" className={`${btnSecondary} mt-8`}>
+            ← Back to the app
+          </Link>
         </div>
-        <Link href="/" className={btnPrimary}>
-          Back to dashboard
-        </Link>
       </div>
     </main>
   );

@@ -6,143 +6,180 @@
  * string module can be imported from either without pulling "use client"
  * into places that don't need it.
  *
- * History: UI/Branding pass (2026-09-09) established the palette — blue as
- * the one interactive/primary accent, red reserved strictly for
- * destructive/negative/warning meaning, near-black header, white/light
- * canvas (see docs/HANDOVER_LOG.md and docs/OPEN_DECISIONS.md for the full
- * rationale and the logo-hex-values caveat — no real logo file exists to
- * sample exact colors from). Premium visual pass (2026-09-12) kept that
- * palette and rebuilt the actual surfaces on top of it: soft layered
- * shadows instead of flat borders, pill-shaped primary actions with a
- * gentle gradient + hover lift, rounder corners throughout, generous
- * spacing, and CSS-only fade-in motion (see globals.css) — no animation
- * library, since every page here is a Server Component by design and a JS
- * animation library would force converting most of them to Client
- * Components for no real gain over `@keyframes` + a couple of utility
- * classes. Layout pass (2026-09-13) added a semantic status color: green
- * for successful/approved/paid/good-standing states, red for
- * cancel/exit/unsuccessful/destructive. Also added stat-tile primitives
- * (the small KPI row shown at the top of every list page). A same-day
- * follow-up made the rule literal for the two remaining cases: `btnPrimary`
- * (every Save/Create button) is now green, not blue, and Sign Out is now
- * red — blue's remaining role is links, active nav, focus rings, and
- * informational badges (New/Sent), not primary actions. The `<details>`
- * "+ Add X" reveal from earlier the same day was replaced by real
- * `/[module]/new` pages (see docs/HANDOVER_LOG.md) — the developer found
- * the inline reveal left a large empty gap next to the narrow form.
+ * Redesign (2026-10-25, "paper & ink"): the earlier passes' gradient pill
+ * buttons, hover lifts, blue-tinted shadows on every card and uppercase
+ * table headers were the main "AI template" tells and are gone. Surfaces
+ * are now flat white sheets on a warm paper canvas, separated by hairline
+ * rules; corners are tight (6–10px); page titles and headline figures use
+ * the Newsreader display serif. All colors come from the semantic tokens in
+ * globals.css (ink, muted, line, brand, positive, negative, …).
+ *
+ * Semantic color rules carried over from earlier passes (developer-directed,
+ * see docs/OPEN_DECISIONS.md): Save/Create buttons are green, Sign out is
+ * red, red otherwise means destructive/negative/outstanding, green means
+ * successful/paid, and the brand navy is for links, focus, active nav and
+ * informational states. Every export name from the previous version is
+ * kept, so existing pages keep working; the new helpers below (pageHeader,
+ * backLink, thNum/tdNum, dl rows, statusLabel, …) are additive.
  */
 
+// --- Page structure ---
+
 export const pageWrap =
-  "flex-1 flex flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full animate-page-in";
+  "flex-1 flex flex-col gap-8 px-5 pt-8 pb-16 sm:px-8 sm:pt-10 max-w-6xl mx-auto w-full animate-page-in";
 
-export const pageTitle = "text-3xl font-bold text-neutral-950 tracking-tight";
-export const pageSubtitle = "text-sm text-neutral-500 mt-1";
-export const sectionTitle = "text-base font-semibold text-neutral-900 tracking-tight";
-export const mutedText = "text-sm text-neutral-500";
+/** Title row: title/subtitle on the left, actions on the right, hairline under. */
+export const pageHeader =
+  "flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-line pb-6";
+export const pageActions = "flex flex-wrap items-center gap-2";
 
-// Shadows are tinted toward the brand blue (rgba(29,78,216,…)) rather than
-// flat black — a card on this page's slightly cool off-white background
-// should look like it's casting a shadow *of* that page, not a generic
-// black smudge borrowed from any other site.
-export const cardClass =
-  "rounded-2xl border border-blue-900/[0.06] bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03),0_10px_30px_-15px_rgba(29,78,216,0.12)]";
+export const pageTitle =
+  "font-display text-[2rem] sm:text-[2.375rem] font-normal leading-[1.08] tracking-[-0.018em] text-ink";
+export const pageSubtitle = "mt-2 text-sm text-muted";
+/** Small label above a page title (e.g. the record type on a detail page). */
+export const eyebrow = "text-[12.5px] font-medium text-muted";
+export const sectionTitle = "text-[15px] font-semibold tracking-[-0.006em] text-ink";
+/** Section title row with an optional action on the right. */
+export const sectionHeader = "mb-3 flex items-baseline justify-between gap-4";
+export const mutedText = "text-sm text-muted";
+export const hintText = "text-[12.5px] text-muted";
 
-// A clickable card (dashboard quick-links) — same surface, plus a hover
-// lift and a blue-tinted glow instead of the flat shadow, so it reads as
-// interactive before the cursor even reaches it.
+/** "← Invoices" style link back to the parent list. */
+export const backLink =
+  "inline-flex items-center gap-1 text-[13px] font-medium text-muted transition-colors hover:text-ink";
+
+// --- Surfaces ---
+
+export const cardClass = "rounded-[10px] border border-line bg-surface p-5 sm:p-6";
+
+// A clickable card — same flat sheet; border darkens and the fill warms on
+// hover. No lift, no glow.
 export const cardInteractiveClass =
-  "rounded-2xl border border-blue-900/[0.06] bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03),0_10px_30px_-15px_rgba(29,78,216,0.12)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_1px_2px_rgba(15,23,42,0.03),0_20px_40px_-20px_rgba(29,78,216,0.35)]";
+  "rounded-[10px] border border-line bg-surface p-5 sm:p-6 transition-colors duration-200 hover:border-line-strong hover:bg-surface-2";
+
+/** Empty list / no-results panel. */
+export const emptyState =
+  "rounded-[10px] border border-dashed border-line-strong bg-surface/60 px-6 py-12 text-center text-sm text-muted";
 
 // --- Buttons / action links ---
 
-export const btnPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_4px_14px_-2px_rgba(5,150,105,0.5)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_20px_-4px_rgba(5,150,105,0.55)] active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none";
+const btnBase =
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out active:translate-y-px disabled:pointer-events-none disabled:opacity-50 cursor-pointer";
 
-export const btnPrimarySm =
-  "inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-700 px-4 py-1.5 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_2px_8px_-2px_rgba(5,150,105,0.5)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_6px_14px_-4px_rgba(5,150,105,0.55)] active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50";
+export const btnPrimary = `${btnBase} h-9 px-4 text-sm bg-positive text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(22,24,29,0.12)] hover:bg-positive-hover`;
 
-export const btnSecondary =
-  "inline-flex items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white px-5 py-2.5 text-sm font-semibold text-neutral-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-neutral-400 hover:bg-neutral-50 active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none";
+export const btnPrimarySm = `${btnBase} h-8 px-3 text-[13px] bg-positive text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(22,24,29,0.12)] hover:bg-positive-hover`;
 
-// Text-style action links — used for inline table/detail actions instead of
-// a full button, kept visually light. `link` = routine action (blue),
-// `linkDanger` = destructive/negative action (red), `linkMuted` = neutral
-// (e.g. "Clear" on a search filter, "Sign out").
+export const btnSecondary = `${btnBase} h-9 px-4 text-sm border border-line-strong bg-surface text-ink shadow-[0_1px_2px_rgba(22,24,29,0.05)] hover:border-[#c3beb2] hover:bg-surface-2`;
+
+export const btnSecondarySm = `${btnBase} h-8 px-3 text-[13px] border border-line-strong bg-surface text-ink hover:bg-surface-2`;
+
+/** Destructive action (Delete …) — outlined red, never a solid fill. */
+export const btnDanger = `${btnBase} h-9 px-4 text-sm border border-[#ecc9c4] bg-surface text-negative hover:border-[#dfa9a2] hover:bg-negative-tint`;
+
+// Text-style action links — inline table/detail actions. `link` = routine
+// (navy), `linkDanger` = destructive (red), `linkMuted` = neutral,
+// `linkSuccess` = restorative (e.g. "Reactivate").
 export const link =
-  "text-sm font-medium text-blue-700 underline-offset-4 transition-colors hover:text-blue-800 hover:underline";
+  "text-sm font-medium text-brand underline decoration-brand/25 underline-offset-[3px] transition-colors hover:text-brand-hover hover:decoration-brand-hover";
 export const linkDanger =
-  "text-sm font-medium text-red-700 underline-offset-4 transition-colors hover:text-red-800 hover:underline";
+  "text-sm font-medium text-negative underline decoration-negative/25 underline-offset-[3px] transition-colors hover:decoration-negative cursor-pointer";
 export const linkMuted =
-  "text-sm font-medium text-neutral-600 underline-offset-4 transition-colors hover:text-neutral-900 hover:underline";
-// `linkSuccess` = a positive/restorative action (e.g. "Reactivate") —
-// green, matching the badge tone for the state it leads to.
+  "text-sm font-medium text-muted underline-offset-[3px] transition-colors hover:text-ink hover:underline cursor-pointer";
 export const linkSuccess =
-  "text-sm font-medium text-emerald-700 underline-offset-4 transition-colors hover:text-emerald-800 hover:underline";
+  "text-sm font-medium text-positive underline decoration-positive/25 underline-offset-[3px] transition-colors hover:decoration-positive cursor-pointer";
+/** A table cell's primary link (record number/name) — ink, not blue. */
+export const rowLink =
+  "font-medium text-ink underline decoration-transparent underline-offset-[3px] transition-colors hover:decoration-ink/40";
 
-// Sign Out lives in the dark header, not on a white surface — a dedicated
-// style rather than reusing `linkDanger` (red-700/800), which would be
-// too low-contrast against `neutral-950`.
+// Sign out in the app header (light header now, so plain red text).
 export const navDangerLink =
-  "text-sm font-medium text-red-400 transition-colors hover:text-red-300";
+  "text-[13px] font-medium text-negative/90 transition-colors hover:text-negative cursor-pointer";
 
 // --- Form fields ---
 
-export const labelClass = "text-sm font-medium text-neutral-700";
+export const labelClass = "text-[13px] font-medium text-ink-2";
 export const inputClass =
-  "block w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-neutral-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-shadow duration-150 placeholder:text-neutral-400 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-600/10";
+  "block w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink shadow-[inset_0_1px_1px_rgba(22,24,29,0.03)] transition-[border-color,box-shadow] duration-150 placeholder:text-faint hover:border-[#c3beb2] focus:border-brand focus:outline-none focus:ring-[3px] focus:ring-brand/15 disabled:bg-surface-2 disabled:text-muted";
 export const fieldWrap = "flex flex-col gap-1.5";
-export const errorText = "text-sm font-medium text-red-600";
+export const errorText = "text-[13px] font-medium text-negative";
+/** A group of related fields inside a form, separated by a hairline. */
+export const fieldset = "flex flex-col gap-4 border-t border-line pt-6 first:border-t-0 first:pt-0";
 
 // --- Tables ---
 
 export const tableWrap =
-  "overflow-x-auto rounded-2xl border border-blue-900/[0.06] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03),0_10px_30px_-15px_rgba(29,78,216,0.12)]";
+  "overflow-x-auto rounded-[10px] border border-line bg-surface [&_tbody_tr:last-child_td]:border-b-0";
 export const table = "w-full text-sm border-collapse";
-export const thClass =
-  "py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 bg-neutral-50/80 border-b border-neutral-200/70";
-export const tdClass = "py-3.5 px-4 border-b border-neutral-100 align-top text-neutral-800";
-export const trHover = "transition-colors duration-150 hover:bg-blue-50/40";
+const thBase =
+  "h-10 px-4 text-[12.5px] font-medium text-muted bg-surface-2 border-b border-line whitespace-nowrap";
+export const thClass = `${thBase} text-left`;
+/** Right-aligned header for money/quantity columns. */
+export const thNum = `${thBase} text-right`;
+const tdBase = "px-4 py-3 border-b border-line/70 align-top text-ink-2";
+export const tdClass = `${tdBase} text-left`;
+/** Right-aligned, tabular, non-wrapping cell for money/quantity columns. */
+export const tdNum = `${tdBase} text-right tabular-nums whitespace-nowrap text-ink`;
+export const trHover = "transition-colors duration-150 hover:bg-surface-2";
+/** Tighter cells for editable line-item tables (inputs inside the cells). */
+export const tdInput = "border-b border-line/70 px-2 py-2 align-middle first:pl-4 last:pr-4";
+export const tdInputNum = `${tdInput} text-right tabular-nums whitespace-nowrap text-ink`;
+
+// --- Definition lists (label/value rows on detail pages) ---
+
+export const dlList = "flex flex-col text-sm";
+export const dlRow =
+  "flex items-baseline justify-between gap-4 border-b border-line/70 py-2 last:border-b-0";
+export const dlTerm = "text-muted";
+export const dlValue = "text-right font-medium text-ink tabular-nums";
+/** Emphasised total row (Grand total / Balance due). */
+export const dlTotalRow =
+  "mt-1 flex items-baseline justify-between gap-4 border-t border-ink/80 pt-3 text-[15px] font-semibold text-ink";
 
 // --- Badges ---
 
-// `green` = successful/approved/paid/good-standing (Active, Converted);
-// `red` = unsuccessful/cancelled/terminal (Archived, Inactive, Lost);
-// `blue` = neutral/in-progress/informational (New, Sent); `neutral` = an
-// unstarted/draft state; `solid` = reserved for a strong, rare emphasis
-// case, not currently used by any status badge.
-type BadgeTone = "blue" | "red" | "green" | "neutral" | "solid";
+// `green` = successful/approved/paid/good-standing; `red` =
+// unsuccessful/cancelled/outstanding; `blue` = in-progress/informational
+// (navy); `amber` = waiting/partial attention; `neutral` = draft/unstarted;
+// `solid` = rare strong emphasis.
+type BadgeTone = "blue" | "red" | "green" | "amber" | "neutral" | "solid";
 
 const badgeTones: Record<BadgeTone, string> = {
-  blue: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-700/10",
-  red: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-700/10",
-  green: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-700/10",
-  neutral: "bg-neutral-100 text-neutral-600 ring-1 ring-inset ring-neutral-500/10",
-  solid: "bg-neutral-900 text-white",
+  blue: "bg-brand-tint text-brand",
+  red: "bg-negative-tint text-negative",
+  green: "bg-positive-tint text-positive",
+  amber: "bg-caution-tint text-caution",
+  neutral: "bg-surface-3 text-muted",
+  solid: "bg-ink text-white",
 };
 
+/** Square-cornered status chip with a leading dot (drawn by ::before). */
 export function badgeClass(tone: BadgeTone): string {
-  return `inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${badgeTones[tone]}`;
+  return `inline-flex items-center gap-1.5 whitespace-nowrap rounded-[5px] px-2 py-0.5 text-[12px] font-medium leading-5 before:size-1.5 before:shrink-0 before:rounded-full before:bg-current before:content-[''] ${badgeTones[tone]}`;
 }
 
-// --- Stat tiles (the small KPI row shown at the top of every list page) ---
+/** "PARTIALLY_PAID" → "Partially paid" — status enums shown in sentence case. */
+export function statusLabel(status: string): string {
+  const words = status.toLowerCase().replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
-export const statGrid = "grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4";
-export const statTile =
-  "rounded-2xl border border-blue-900/[0.06] bg-white px-4 py-3.5 sm:px-5 sm:py-4 shadow-[0_1px_2px_rgba(15,23,42,0.03),0_10px_30px_-15px_rgba(29,78,216,0.12)]";
-export const statLabel = "text-xs font-medium text-neutral-500";
+// --- Stat tiles (the KPI row at the top of list/detail pages) ---
+
+export const statGrid = "grid grid-cols-2 gap-3 sm:grid-cols-3";
+export const statTile = "rounded-[10px] border border-line bg-surface px-4 py-4 sm:px-5 sm:py-5";
+export const statLabel = "text-[12.5px] font-medium text-muted";
 
 type StatTone = "blue" | "red" | "green" | "neutral";
 const statValueTones: Record<StatTone, string> = {
-  blue: "text-blue-700",
-  red: "text-red-700",
-  green: "text-emerald-700",
-  neutral: "text-neutral-950",
+  blue: "text-brand",
+  red: "text-negative",
+  green: "text-positive",
+  neutral: "text-ink",
 };
 
-// text-xl rather than text-2xl at the base size — a 2-up mobile stat grid
-// (statGrid above) only gives each tile ~150px, and a money value like
-// "AED 12,480.00" at text-2xl wraps mid-figure on a phone. tabular-nums so
-// a column of these never visually jitters as the digits animate/update.
+// Display serif, lining tabular figures. On a narrow 2-up mobile tile a long
+// figure breaks after "AED", never mid-number.
 export function statValueClass(tone: StatTone = "neutral"): string {
-  return `text-xl sm:text-2xl font-bold tracking-tight tabular-nums ${statValueTones[tone]}`;
+  return `mt-2 font-display text-[1.45rem] sm:text-[1.85rem] font-normal leading-[1.05] tracking-[-0.01em] figures ${statValueTones[tone]}`;
 }

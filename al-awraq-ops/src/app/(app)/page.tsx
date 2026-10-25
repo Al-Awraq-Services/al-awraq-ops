@@ -11,17 +11,27 @@ import { PaidVsOutstandingChart } from "@/components/dashboard/PaidVsOutstanding
 import { TopCustomersChart, type TopCustomer } from "@/components/dashboard/TopCustomersChart";
 import {
   pageWrap,
+  pageHeader,
+  pageActions,
   pageTitle,
   pageSubtitle,
+  eyebrow,
   sectionTitle,
+  sectionHeader,
   tableWrap,
   table,
   thClass,
+  thNum,
   tdClass,
+  tdNum,
   trHover,
   link,
+  rowLink,
   badgeClass,
-  mutedText,
+  statusLabel,
+  emptyState,
+  btnPrimary,
+  btnSecondary,
 } from "@/lib/ui/classNames";
 
 function money(n: number): string {
@@ -126,20 +136,39 @@ export default async function DashboardPage() {
 
   const recentInvoices = computed.slice(0, 8);
 
-  const statusTone = (status: string): "green" | "blue" | "red" =>
-    status === "PAID" ? "green" : status === "PARTIAL" ? "blue" : "red";
+  const statusTone = (status: string): "green" | "amber" | "neutral" =>
+    status === "PAID" ? "green" : status === "PARTIAL" ? "amber" : "neutral";
+
+  const today = now.toLocaleDateString("en-AE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <main className={pageWrap}>
-      <div>
-        <h1 className={pageTitle}>Dashboard</h1>
-        <p className={pageSubtitle}>An overview of invoicing activity.</p>
+      <div className={pageHeader}>
+        <div>
+          <p className={eyebrow}>{today}</p>
+          <h1 className={`${pageTitle} mt-1`}>Overview</h1>
+          <p className={pageSubtitle}>Invoicing and collections across all customers.</p>
+        </div>
+        <div className={pageActions}>
+          <Link href="/invoices" className={btnSecondary}>
+            All invoices
+          </Link>
+          <Link href="/invoices/new" className={btnPrimary}>
+            New invoice
+          </Link>
+        </div>
       </div>
 
-      {/* 4 tiles, not the shared 3-col statGrid (which leaves an orphaned
-          4th tile alone on its own row at the sm breakpoint) — 2-up on
-          mobile, a clean single row of 4 from md up. */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+      {/* One ledger strip with hairline dividers rather than four floating
+          cards — gap-px over a line-colored background draws the rules, so
+          they stay correct at the 2-up mobile and 4-up desktop layouts
+          (always an even count, so no orphan cell). */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-line bg-line md:grid-cols-4">
         <AnimatedStat
           label="Revenue collected"
           value={totalCollected}
@@ -147,6 +176,7 @@ export default async function DashboardPage() {
           prefix="AED "
           tone="green"
           delay={0}
+          className="bg-surface px-5 py-5"
         />
         <AnimatedStat
           label="Outstanding balance"
@@ -155,36 +185,51 @@ export default async function DashboardPage() {
           prefix="AED "
           tone="red"
           delay={0.05}
+          className="bg-surface px-5 py-5"
         />
         <AnimatedStat
           label="Invoices this month"
           value={invoicesThisMonth}
           format="integer"
-          tone="blue"
+          tone="neutral"
           delay={0.1}
+          className="bg-surface px-5 py-5"
         />
         <AnimatedStat
-          label="Average invoice value"
+          label="Average invoice"
           value={averageInvoiceValue}
           format="money"
           prefix="AED "
           tone="neutral"
           delay={0.15}
+          className="bg-surface px-5 py-5"
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="lg:col-span-2">
-          <RevenueTrendChart data={revenueTrend} />
-        </div>
+      <RevenueTrendChart data={revenueTrend} />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <PaidVsOutstandingChart paid={totalCollected} outstanding={totalOutstanding} />
         <TopCustomersChart data={topCustomers} />
       </div>
 
-      <div>
-        <h2 className={`${sectionTitle} mb-3`}>Recent invoices</h2>
+      <section>
+        <div className={sectionHeader}>
+          <h2 className={sectionTitle}>Recent invoices</h2>
+          {recentInvoices.length > 0 && (
+            <Link href="/invoices" className={link}>
+              View all
+            </Link>
+          )}
+        </div>
         {recentInvoices.length === 0 ? (
-          <p className={mutedText}>No invoices yet.</p>
+          <div className={emptyState}>
+            No invoices yet.{" "}
+            <Link href="/invoices/new" className={link}>
+              Create the first one
+            </Link>
+            .
+          </div>
         ) : (
           <div className={tableWrap}>
             <table className={table}>
@@ -193,7 +238,7 @@ export default async function DashboardPage() {
                   <th className={thClass}>Number</th>
                   <th className={thClass}>Customer</th>
                   <th className={thClass}>Date</th>
-                  <th className={thClass}>Total</th>
+                  <th className={thNum}>Total</th>
                   <th className={thClass}>Status</th>
                 </tr>
               </thead>
@@ -201,7 +246,7 @@ export default async function DashboardPage() {
                 {recentInvoices.map((inv) => (
                   <tr key={inv.id} className={trHover}>
                     <td className={tdClass}>
-                      <Link href={`/invoices/${inv.id}`} className={link}>
+                      <Link href={`/invoices/${inv.id}`} className={rowLink}>
                         {inv.invoiceNumber}
                       </Link>
                     </td>
@@ -210,16 +255,18 @@ export default async function DashboardPage() {
                         {inv.customerName}
                       </Link>
                     </td>
-                    <td className={tdClass}>
+                    <td className={`${tdClass} whitespace-nowrap`}>
                       {inv.invoiceDate.toLocaleDateString("en-AE", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
                       })}
                     </td>
-                    <td className={tdClass}>{money(inv.grandTotal)}</td>
+                    <td className={tdNum}>{money(inv.grandTotal)}</td>
                     <td className={tdClass}>
-                      <span className={badgeClass(statusTone(inv.status))}>{inv.status}</span>
+                      <span className={badgeClass(statusTone(inv.status))}>
+                        {statusLabel(inv.status)}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -227,7 +274,7 @@ export default async function DashboardPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
     </main>
   );
 }

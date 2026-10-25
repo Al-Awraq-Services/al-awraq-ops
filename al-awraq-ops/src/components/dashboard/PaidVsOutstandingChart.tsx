@@ -1,10 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { cardClass, sectionTitle, mutedText } from "@/lib/ui/classNames";
+import { cardClass, sectionTitle, hintText, emptyState } from "@/lib/ui/classNames";
 import { formatMoney } from "@/lib/invoiceMath";
 
+/**
+ * Collected vs outstanding as one proportional bar plus the two figures —
+ * replaces the earlier donut chart, which spent a whole card on two numbers
+ * and needed a hover to read either of them.
+ */
 export function PaidVsOutstandingChart({
   paid,
   outstanding,
@@ -12,54 +16,58 @@ export function PaidVsOutstandingChart({
   paid: number;
   outstanding: number;
 }) {
-  const data = [
-    { name: "Collected", value: Math.max(paid, 0), color: "#059669" },
-    { name: "Outstanding", value: Math.max(outstanding, 0), color: "#dc2626" },
-  ];
-  const total = data[0].value + data[1].value;
+  const collected = Math.max(paid, 0);
+  const owed = Math.max(outstanding, 0);
+  const total = collected + owed;
+  const collectedShare = total > 0 ? collected / total : 0;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
+    <motion.section
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
-      className={cardClass}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
+      className={`${cardClass} flex flex-col`}
     >
-      <h2 className={`${sectionTitle} mb-4`}>Paid vs outstanding</h2>
+      <h2 className={sectionTitle}>Collection rate</h2>
+      <p className={`${hintText} mt-0.5`}>Share of everything invoiced that has been paid</p>
       {total <= 0 ? (
-        <p className={mutedText}>No invoices yet.</p>
+        <div className={`${emptyState} mt-5`}>Nothing invoiced yet.</div>
       ) : (
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={68}
-                outerRadius={100}
-                paddingAngle={3}
-                isAnimationActive
-                animationDuration={1100}
-                animationEasing="ease-out"
-              >
-                {data.map((entry) => (
-                  <Cell key={entry.name} fill={entry.color} stroke="none" />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value) => `AED ${formatMoney(Number(value))}`}
-                contentStyle={{
-                  borderRadius: 12,
-                  border: "1px solid #e5e7eb",
-                  boxShadow: "0 10px 30px -15px rgba(0,0,0,0.2)",
-                }}
-              />
-              <Legend verticalAlign="bottom" height={36} iconType="circle" />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        <>
+          <p className="mt-6 font-display text-[3.25rem] font-light leading-none tracking-[-0.02em] text-ink figures">
+            {(collectedShare * 100).toFixed(1)}
+            <span className="ml-0.5 text-[1.75rem] text-muted">%</span>
+          </p>
+          <div
+            className="mt-6 flex h-2 w-full overflow-hidden rounded-full bg-negative-tint"
+            role="img"
+            aria-label={`${(collectedShare * 100).toFixed(1)}% collected`}
+          >
+            <motion.div
+              className="h-full rounded-full bg-positive"
+              initial={{ width: 0 }}
+              animate={{ width: `${collectedShare * 100}%` }}
+              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+            />
+          </div>
+          <dl className="mt-auto grid grid-cols-2 gap-4 pt-8 text-sm">
+            <div>
+              <dt className="flex items-center gap-2 text-muted">
+                <span aria-hidden="true" className="size-2 rounded-full bg-positive" />
+                Collected
+              </dt>
+              <dd className="mt-1 font-medium text-ink tabular-nums">AED {formatMoney(collected)}</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-2 text-muted">
+                <span aria-hidden="true" className="size-2 rounded-full bg-negative/70" />
+                Outstanding
+              </dt>
+              <dd className="mt-1 font-medium text-negative tabular-nums">AED {formatMoney(owed)}</dd>
+            </div>
+          </dl>
+        </>
       )}
-    </motion.div>
+    </motion.section>
   );
 }

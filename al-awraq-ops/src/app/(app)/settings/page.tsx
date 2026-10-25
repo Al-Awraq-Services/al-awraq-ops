@@ -3,7 +3,15 @@ import { requireUser } from "@/lib/auth/appAuth";
 import { toNum } from "@/lib/invoiceMath";
 import { BusinessProfileForm } from "./BusinessProfileForm";
 import { ChangePasswordForm } from "./ChangePasswordForm";
-import { pageWrap, pageTitle, pageSubtitle, sectionTitle, cardClass } from "@/lib/ui/classNames";
+import {
+  pageWrap,
+  pageHeader,
+  pageTitle,
+  pageSubtitle,
+  sectionTitle,
+  hintText,
+  cardClass,
+} from "@/lib/ui/classNames";
 
 export default async function SettingsPage() {
   const user = await requireUser();
@@ -26,22 +34,29 @@ export default async function SettingsPage() {
 
   return (
     <main className={pageWrap}>
-      <div>
-        <h1 className={pageTitle}>Settings</h1>
-        <p className={pageSubtitle}>Business details, invoicing defaults, and account security.</p>
+      <div className={pageHeader}>
+        <div>
+          <h1 className={pageTitle}>Settings</h1>
+          <p className={pageSubtitle}>
+            {user.isMainAccount
+              ? "Business details, invoicing defaults and account security."
+              : "Account security."}
+          </p>
+        </div>
       </div>
 
       {user.isMainAccount && (
-        <div className={`${cardClass} max-w-2xl`}>
-          <h2 className={`${sectionTitle} mb-4`}>Business details</h2>
+        <section className={`${cardClass} max-w-3xl`}>
+          <h2 className={`${sectionTitle} mb-6`}>Business profile</h2>
           <BusinessProfileForm defaultValues={defaultValues} />
-        </div>
+        </section>
       )}
 
-      <div className={`${cardClass} max-w-2xl`}>
-        <h2 className={`${sectionTitle} mb-4`}>Change password</h2>
+      <section className={`${cardClass} max-w-3xl`}>
+        <h2 className={sectionTitle}>Change password</h2>
+        <p className={`${hintText} mt-1 mb-5`}>For the account you&apos;re signed in with.</p>
         <ChangePasswordForm />
-      </div>
+      </section>
     </main>
   );
 }

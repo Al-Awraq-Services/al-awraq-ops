@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/auth/appAuth";
 import { toNum, nextInvoiceDisplayNumber } from "@/lib/invoiceMath";
 import { createInvoiceAction } from "@/actions/invoices";
 import { InvoiceForm } from "@/components/forms/InvoiceForm";
-import { pageWrap, pageTitle, pageSubtitle, link } from "@/lib/ui/classNames";
+import { pageWrap, pageHeader, pageTitle, pageSubtitle, backLink } from "@/lib/ui/classNames";
 
 export default async function NewInvoicePage() {
   await requirePermission("canManageInvoices");
@@ -31,11 +31,17 @@ export default async function NewInvoicePage() {
   return (
     <main className={pageWrap}>
       <div>
-        <Link href="/invoices" className={link}>
-          ← Back to invoices
+        <Link href="/invoices" className={backLink}>
+          ← Invoices
         </Link>
-        <h1 className={`${pageTitle} mt-2`}>New invoice</h1>
-        <p className={pageSubtitle}>Fill in the details below to create a new invoice.</p>
+        <div className={`${pageHeader} mt-4`}>
+          <div>
+            <h1 className={pageTitle}>New invoice</h1>
+            <p className={pageSubtitle}>
+              Will be numbered {nextInvoiceNumberDisplay} unless you change it.
+            </p>
+          </div>
+        </div>
       </div>
 
       <InvoiceForm

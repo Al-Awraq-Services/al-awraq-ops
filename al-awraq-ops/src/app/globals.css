@@ -1,27 +1,77 @@
 @import "tailwindcss";
 
 /*
- * Premium visual pass (2026-09-12) — builds on the UI/Branding pass
- * (2026-09-09). Still light mode only (see docs/OPEN_DECISIONS.md); this
- * pass adds motion (fade-in keyframes), a softer layered canvas instead of
- * flat gray, refined focus/selection states, and font smoothing tuned for
- * the Geist family already in use (see src/app/layout.tsx) — no new font
- * was introduced; Geist was judged close enough to the "clean geometric
- * sans" reference point (Apple's SF Pro) that swapping fonts would add
- * risk (a new Google Fonts subset, different metrics needing re-tuning
- * across every page) without a real payoff over using Geist properly:
- * tighter tracking on headings, real weight contrast, more generous scale.
+ * Design system — "paper & ink" redesign (2026-10-25).
+ *
+ * Replaces the earlier premium pass (blue radial wash, gradient pill
+ * buttons, blue-tinted card shadows on every surface) — that combination
+ * read as a generic AI-generated template. This pass is deliberately
+ * quieter: a warm paper canvas, near-black ink, hairline rules instead of
+ * shadows, one brand accent (the logo's navy), and an editorial serif
+ * (Newsreader) for page titles and headline figures over Geist for UI.
+ *
+ * Every color the UI uses is a semantic token below, exposed to Tailwind
+ * via @theme (bg-canvas, text-ink, border-line, text-brand, …), so a palette
+ * change is a one-file edit. Semantic meaning is unchanged from earlier
+ * passes: green = commit/success/paid, red = destructive/negative/outstanding,
+ * navy = links, focus, active nav, informational states. Light mode only
+ * (see docs/OPEN_DECISIONS.md).
  */
 :root {
-  --background: #f5f6f8;
-  --foreground: #0a0a0a;
+  --canvas: #f5f4f0;
+  --surface: #ffffff;
+  --surface-2: #faf9f6;
+  --surface-3: #f0eee8;
+  --line: #e6e3dc;
+  --line-strong: #d4d0c6;
+  --ink: #16181d;
+  --ink-2: #3a3d45;
+  --muted: #6b6962;
+  --faint: #9b988f;
+
+  /* Navy sampled from the logo, slightly deepened for text contrast. */
+  --brand: #253a8c;
+  --brand-hover: #1b2b6b;
+  --brand-tint: #eef0f8;
+
+  --positive: #1e6a4a;
+  --positive-hover: #17573c;
+  --positive-tint: #e8f2ec;
+  --negative: #b42318;
+  --negative-tint: #fbedeb;
+  --caution: #8a5a0b;
+  --caution-tint: #faf1e0;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-tint: var(--brand-tint);
+  --color-positive: var(--positive);
+  --color-positive-hover: var(--positive-hover);
+  --color-positive-tint: var(--positive-tint);
+  --color-negative: var(--negative);
+  --color-negative-tint: var(--negative-tint);
+  --color-caution: var(--caution);
+  --color-caution-tint: var(--caution-tint);
+
+  /* Kept for any leftover references to the old token names. */
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-newsreader);
 }
 
 html {
@@ -29,25 +79,59 @@ html {
 }
 
 body {
-  /* A faint, fixed radial highlight instead of flat gray — the kind of
-     subtle depth premium marketing/product pages use so a plain page
-     never reads as "unstyled". Fixed attachment so it doesn't scroll with
-     content and never fights the page's own background-color paint. */
-  background-color: var(--background);
-  background-image: radial-gradient(
-    120% 100% at 50% -10%,
-    rgba(29, 78, 216, 0.05),
-    transparent 55%
-  );
-  background-attachment: fixed;
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background-color: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Fixed-width digits everywhere — an invoicing app full of prices and
-     totals should never have a "4" that's narrower than an "8"; numbers
-     in a table column or an animating stat tile stay visually steady. */
+  /* An invoicing app full of prices: fixed-width digits everywhere so a
+     column of totals or an animating stat tile never jitters. */
   font-variant-numeric: tabular-nums;
+}
+
+/* Paper grain — a fixed, very faint noise layer so the canvas reads as a
+   material rather than a flat fill. pointer-events: none, never covers
+   interaction. Content is positioned but deliberately gets no z-index, so
+   it paints above this layer (later in tree order) without forming its own
+   stacking context — otherwise the logo's mix-blend-multiply would blend
+   against a transparent group and show the JPEG's white box. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.42  0 0 0 0 0.36  0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+body > * {
+  position: relative;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
+/* Native selects get the same quiet chevron everywhere instead of the
+   browser's default arrow; checkboxes/radios pick up the brand navy. */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%236b6962' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4.5 6 7.5 9 4.5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  padding-right: 2.25rem;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--brand);
 }
 
 /* Visually hidden until focused — lets a keyboard user jump straight past
@@ -57,12 +141,12 @@ body {
   top: -40px;
   left: 1rem;
   z-index: 50;
-  background: #0a0a0a;
+  background: var(--ink);
   color: #fff;
   padding: 0.5rem 1rem;
-  border-radius: 0 0 0.5rem 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
+  border-radius: 0 0 6px 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
   transition: top 0.15s ease-out;
 }
 .skip-link:focus {
@@ -70,15 +154,13 @@ body {
 }
 
 ::selection {
-  background: rgba(29, 78, 216, 0.2);
-  color: #0a0a0a;
+  background: rgba(37, 58, 140, 0.16);
+  color: var(--ink);
 }
 
-/* A visible-but-quiet focus ring everywhere, keyboard-only (mouse clicks
-   don't trigger :focus-visible) — accessible without the "everything has
-   a blue halo on click" look. */
+/* Keyboard-only focus ring (mouse clicks don't trigger :focus-visible). */
 :focus-visible {
-  outline: 2px solid #1d4ed8;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -86,7 +168,7 @@ body {
 @keyframes fade-in-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -104,28 +186,44 @@ body {
 }
 
 @utility animate-page-in {
-  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fade-in-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @utility animate-fade-in {
-  animation: fade-in 0.4s ease-out both;
+  animation: fade-in 0.35s ease-out both;
 }
 
 /* Applied to a list of cards/rows to stagger their entrance slightly —
    pair with an inline `--i` custom property set to the item's index. */
 @utility animate-stagger {
-  animation: fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
+  animation: fade-in-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
 }
 
-/* Slim, quiet scrollbars (WebKit) so the horizontally-scrollable nav strip
-   and wide tables don't drag in the browser's default chunky scrollbar. */
+/* Lining, tabular figures for headline numbers set in the display serif. */
+@utility figures {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Slim, quiet scrollbars (WebKit) for the scrollable nav strip and wide
+   tables. */
 ::-webkit-scrollbar {
   height: 6px;
   width: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(22, 24, 29, 0.14);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-track {

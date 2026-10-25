@@ -2,21 +2,32 @@ import Link from "next/link";
 import { requirePermission } from "@/lib/auth/appAuth";
 import { createVendorAction } from "@/actions/vendors";
 import { VendorForm } from "@/components/forms/VendorForm";
-import { pageWrap, pageTitle, pageSubtitle, cardClass, link } from "@/lib/ui/classNames";
+import {
+  pageWrap,
+  pageHeader,
+  pageTitle,
+  pageSubtitle,
+  backLink,
+  cardClass,
+} from "@/lib/ui/classNames";
 
 export default async function NewVendorPage() {
   await requirePermission("canManagePurchaseOrders");
 
   return (
     <main className={pageWrap}>
-      <div>
-        <Link href="/vendors" className={link}>
-          ← Back to vendors
+      <div className="flex flex-col gap-4">
+        <Link href="/vendors" className={`${backLink} self-start`}>
+          ← Vendors
         </Link>
-        <h1 className={`${pageTitle} mt-2`}>New Vendor</h1>
-        <p className={pageSubtitle}>Add a vendor to the supplier address book.</p>
+        <div className={pageHeader}>
+          <div>
+            <h1 className={pageTitle}>New vendor</h1>
+            <p className={pageSubtitle}>Add a supplier to the vendor address book.</p>
+          </div>
+        </div>
       </div>
-      <div className={`${cardClass} max-w-xl`}>
+      <div className={`${cardClass} max-w-2xl`}>
         <VendorForm mode="create" action={createVendorAction} />
       </div>
     </main>
