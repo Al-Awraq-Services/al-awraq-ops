@@ -4,9 +4,12 @@ import { requirePermission } from "@/lib/auth/appAuth";
 import { computeInvoiceTotals, toNum, formatMoney } from "@/lib/invoiceMath";
 import {
   pageWrap,
+  pageHeader,
+  pageActions,
   pageTitle,
   pageSubtitle,
   btnPrimary,
+  btnSecondary,
   statGrid,
   statTile,
   statLabel,
@@ -14,17 +17,21 @@ import {
   tableWrap,
   table,
   thClass,
+  thNum,
   tdClass,
+  tdNum,
   trHover,
   link,
+  rowLink,
   badgeClass,
+  statusLabel,
   inputClass,
-  mutedText,
+  emptyState,
 } from "@/lib/ui/classNames";
 
-function statusTone(status: "UNPAID" | "PARTIAL" | "PAID"): "green" | "blue" | "neutral" {
+function statusTone(status: "UNPAID" | "PARTIAL" | "PAID"): "green" | "amber" | "neutral" {
   if (status === "PAID") return "green";
-  if (status === "PARTIAL") return "blue";
+  if (status === "PARTIAL") return "amber";
   return "neutral";
 }
 
@@ -34,6 +41,7 @@ export default async function InvoicesPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const user = await requirePermission("canViewInvoices");
+  const canManage = user.isMainAccount || user.canManageInvoices;
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
 
@@ -91,15 +99,17 @@ export default async function InvoicesPage({
 
   return (
     <main className={pageWrap}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className={pageHeader}>
         <div>
           <h1 className={pageTitle}>Invoices</h1>
-          <p className={pageSubtitle}>{invoices.length} on file.</p>
+          <p className={pageSubtitle}>{invoices.length} on file</p>
         </div>
-        {(user.isMainAccount || user.canManageInvoices) && (
-          <Link href="/invoices/new" className={btnPrimary}>
-            + New Invoice
-          </Link>
+        {canManage && (
+          <div className={pageActions}>
+            <Link href="/invoices/new" className={btnPrimary}>
+              New invoice
+            </Link>
+          </div>
         )}
       </div>
 
@@ -130,23 +140,38 @@ export default async function InvoicesPage({
         )}
       </div>
 
-      <form className="flex max-w-sm gap-2" action="/invoices" method="get">
+      <form className="flex max-w-md gap-2" action="/invoices" method="get">
         <input
           type="text"
           name="q"
-          placeholder="Search by invoice # or customer…"
+          placeholder="Invoice number or customer"
+          aria-label="Search invoices"
           defaultValue={query}
           className={inputClass}
         />
-        <button type="submit" className={btnPrimary}>
+        <button type="submit" className={btnSecondary}>
           Search
         </button>
       </form>
 
       {rows.length === 0 ? (
-        <p className={mutedText}>
-          {query ? `No invoices match "${query}".` : "No invoices yet."}
-        </p>
+        <div className={emptyState}>
+          {query ? (
+            <>No invoices match &ldquo;{query}&rdquo;.</>
+          ) : (
+            <>
+              No invoices yet.
+              {canManage && (
+                <>
+                  {" "}
+                  <Link href="/invoices/new" className={link}>
+                    Create the first one
+                  </Link>
+                </>
+              )}
+            </>
+          )}
+        </div>
       ) : (
         <div className={tableWrap}>
           <table className={table}>
@@ -155,31 +180,33 @@ export default async function InvoicesPage({
                 <th className={thClass}>Number</th>
                 <th className={thClass}>Customer</th>
                 <th className={thClass}>Date</th>
-                <th className={thClass}>Total</th>
-                <th className={thClass}>Balance</th>
+                <th className={thNum}>Total</th>
+                <th className={thNum}>Balance</th>
                 <th className={thClass}>Status</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className={trHover}>
-                  <td className={tdClass}>
-                    <Link href={`/invoices/${row.id}`} className={link}>
+                  <td className={`${tdClass} whitespace-nowrap`}>
+                    <Link href={`/invoices/${row.id}`} className={rowLink}>
                       {row.invoiceNumber}
                     </Link>
                   </td>
                   <td className={tdClass}>{row.customerName}</td>
-                  <td className={tdClass}>
+                  <td className={`${tdClass} whitespace-nowrap`}>
                     {row.invoiceDate.toLocaleDateString("en-AE", {
                       year: "numeric",
                       month: "short",
                       day: "numeric",
                     })}
                   </td>
-                  <td className={tdClass}>AED {formatMoney(row.grandTotal)}</td>
-                  <td className={tdClass}>AED {formatMoney(row.balanceDue)}</td>
+                  <td className={tdNum}>AED {formatMoney(row.grandTotal)}</td>
+                  <td className={tdNum}>AED {formatMoney(row.balanceDue)}</td>
                   <td className={tdClass}>
-                    <span className={badgeClass(statusTone(row.status))}>{row.status}</span>
+                    <span className={badgeClass(statusTone(row.status))}>
+                      {statusLabel(row.status)}
+                    </span>
                   </td>
                 </tr>
               ))}

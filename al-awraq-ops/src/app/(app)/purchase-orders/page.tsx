@@ -4,9 +4,12 @@ import { requirePermission } from "@/lib/auth/appAuth";
 import { computeInvoiceTotals, toNum, formatMoney } from "@/lib/invoiceMath";
 import {
   pageWrap,
+  pageHeader,
+  pageActions,
   pageTitle,
   pageSubtitle,
   btnPrimary,
+  btnSecondary,
   statGrid,
   statTile,
   statLabel,
@@ -14,17 +17,21 @@ import {
   tableWrap,
   table,
   thClass,
+  thNum,
   tdClass,
+  tdNum,
   trHover,
   link,
+  rowLink,
   badgeClass,
+  statusLabel,
   inputClass,
-  mutedText,
+  emptyState,
 } from "@/lib/ui/classNames";
 
-function statusTone(status: "UNPAID" | "PARTIAL" | "PAID"): "green" | "blue" | "neutral" {
+function statusTone(status: "UNPAID" | "PARTIAL" | "PAID"): "green" | "amber" | "neutral" {
   if (status === "PAID") return "green";
-  if (status === "PARTIAL") return "blue";
+  if (status === "PARTIAL") return "amber";
   return "neutral";
 }
 
@@ -34,6 +41,7 @@ export default async function PurchaseOrdersPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const user = await requirePermission("canViewPurchaseOrders");
+  const canManage = user.isMainAccount || user.canManagePurchaseOrders;
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
 
@@ -89,18 +97,18 @@ export default async function PurchaseOrdersPage({
 
   return (
     <main className={pageWrap}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className={pageHeader}>
         <div>
-          <h1 className={pageTitle}>Purchase Orders</h1>
-          <p className={pageSubtitle}>{purchaseOrders.length} on file.</p>
+          <h1 className={pageTitle}>Purchase orders</h1>
+          <p className={pageSubtitle}>{purchaseOrders.length} on file</p>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <Link href="/vendors" className={link}>
-            Manage vendors →
+        <div className={pageActions}>
+          <Link href="/vendors" className={btnSecondary}>
+            Vendors
           </Link>
-          {(user.isMainAccount || user.canManagePurchaseOrders) && (
+          {canManage && (
             <Link href="/purchase-orders/new" className={btnPrimary}>
-              + New Purchase Order
+              New purchase order
             </Link>
           )}
         </div>
@@ -133,23 +141,38 @@ export default async function PurchaseOrdersPage({
         )}
       </div>
 
-      <form className="flex max-w-sm gap-2" action="/purchase-orders" method="get">
+      <form className="flex max-w-md gap-2" action="/purchase-orders" method="get">
         <input
           type="text"
           name="q"
-          placeholder="Search by PO # or vendor…"
+          placeholder="PO number or vendor"
+          aria-label="Search purchase orders"
           defaultValue={query}
           className={inputClass}
         />
-        <button type="submit" className={btnPrimary}>
+        <button type="submit" className={btnSecondary}>
           Search
         </button>
       </form>
 
       {rows.length === 0 ? (
-        <p className={mutedText}>
-          {query ? `No purchase orders match "${query}".` : "No purchase orders yet."}
-        </p>
+        <div className={emptyState}>
+          {query ? (
+            <>No purchase orders match &ldquo;{query}&rdquo;.</>
+          ) : (
+            <>
+              No purchase orders yet.
+              {canManage && (
+                <>
+                  {" "}
+                  <Link href="/purchase-orders/new" className={link}>
+                    Create the first one
+                  </Link>
+                </>
+              )}
+            </>
+          )}
+        </div>
       ) : (
         <div className={tableWrap}>
           <table className={table}>
@@ -158,31 +181,33 @@ export default async function PurchaseOrdersPage({
                 <th className={thClass}>Number</th>
                 <th className={thClass}>Vendor</th>
                 <th className={thClass}>Date</th>
-                <th className={thClass}>Total</th>
-                <th className={thClass}>Balance</th>
+                <th className={thNum}>Total</th>
+                <th className={thNum}>Balance</th>
                 <th className={thClass}>Status</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className={trHover}>
-                  <td className={tdClass}>
-                    <Link href={`/purchase-orders/${row.id}`} className={link}>
+                  <td className={`${tdClass} whitespace-nowrap`}>
+                    <Link href={`/purchase-orders/${row.id}`} className={rowLink}>
                       {row.poNumber}
                     </Link>
                   </td>
                   <td className={tdClass}>{row.vendorName}</td>
-                  <td className={tdClass}>
+                  <td className={`${tdClass} whitespace-nowrap`}>
                     {row.orderDate.toLocaleDateString("en-AE", {
                       year: "numeric",
                       month: "short",
                       day: "numeric",
                     })}
                   </td>
-                  <td className={tdClass}>AED {formatMoney(row.grandTotal)}</td>
-                  <td className={tdClass}>AED {formatMoney(row.balanceDue)}</td>
+                  <td className={tdNum}>AED {formatMoney(row.grandTotal)}</td>
+                  <td className={tdNum}>AED {formatMoney(row.balanceDue)}</td>
                   <td className={tdClass}>
-                    <span className={badgeClass(statusTone(row.status))}>{row.status}</span>
+                    <span className={badgeClass(statusTone(row.status))}>
+                      {statusLabel(row.status)}
+                    </span>
                   </td>
                 </tr>
               ))}

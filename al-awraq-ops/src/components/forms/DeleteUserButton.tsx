@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { deleteUserAction, type UserActionState } from "@/actions/users";
-import { btnSecondary, errorText } from "@/lib/ui/classNames";
+import { btnDanger, errorText } from "@/lib/ui/classNames";
 
 export function DeleteUserButton({ userId }: { userId: string }) {
   const [state, formAction, pending] = useActionState<UserActionState, FormData>(
@@ -15,7 +15,7 @@ export function DeleteUserButton({ userId }: { userId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className={`${btnSecondary} border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50`}
+        className={btnDanger}
         onClick={(event) => {
           if (!confirm("Delete this account? This cannot be undone.")) {
             event.preventDefault();

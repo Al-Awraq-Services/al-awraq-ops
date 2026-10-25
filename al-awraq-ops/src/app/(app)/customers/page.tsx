@@ -4,18 +4,23 @@ import { requirePermission } from "@/lib/auth/appAuth";
 import { computeInvoiceTotals, toNum } from "@/lib/invoiceMath";
 import {
   pageWrap,
+  pageHeader,
+  pageActions,
   pageTitle,
   pageSubtitle,
   btnPrimary,
+  btnSecondary,
   tableWrap,
   table,
   thClass,
+  thNum,
   tdClass,
+  tdNum,
   trHover,
-  link,
+  rowLink,
   badgeClass,
   inputClass,
-  mutedText,
+  emptyState,
 } from "@/lib/ui/classNames";
 
 export default async function CustomersPage({
@@ -78,35 +83,38 @@ export default async function CustomersPage({
 
   return (
     <main className={pageWrap}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className={pageHeader}>
         <div>
           <h1 className={pageTitle}>Customers</h1>
-          <p className={pageSubtitle}>Your address book — {customers.length} on file.</p>
+          <p className={pageSubtitle}>Address book, {customers.length} on file.</p>
         </div>
         {(user.isMainAccount || user.canManageCustomers) && (
-          <Link href="/customers/new" className={btnPrimary}>
-            + New Customer
-          </Link>
+          <div className={pageActions}>
+            <Link href="/customers/new" className={btnPrimary}>
+              New customer
+            </Link>
+          </div>
         )}
       </div>
 
-      <form className="flex max-w-sm gap-2" action="/customers" method="get">
+      <form className="flex w-full max-w-md gap-2" action="/customers" method="get">
         <input
           type="text"
           name="q"
-          placeholder="Search by name…"
+          placeholder="Search by name"
+          aria-label="Search customers by name"
           defaultValue={query}
           className={inputClass}
         />
-        <button type="submit" className={btnPrimary}>
+        <button type="submit" className={btnSecondary}>
           Search
         </button>
       </form>
 
       {rows.length === 0 ? (
-        <p className={mutedText}>
+        <div className={emptyState}>
           {query ? `No customers match "${query}".` : "No customers yet."}
-        </p>
+        </div>
       ) : (
         <div className={tableWrap}>
           <table className={table}>
@@ -116,14 +124,14 @@ export default async function CustomersPage({
                 <th className={thClass}>Type</th>
                 <th className={thClass}>Address</th>
                 <th className={thClass}>Contact</th>
-                {user.isMainAccount && <th className={thClass}>Balance</th>}
+                {user.isMainAccount && <th className={thNum}>Balance</th>}
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className={trHover}>
                   <td className={tdClass}>
-                    <Link href={`/customers/${row.id}`} className={link}>
+                    <Link href={`/customers/${row.id}`} className={rowLink}>
                       {row.name}
                     </Link>
                   </td>
@@ -131,15 +139,15 @@ export default async function CustomersPage({
                     {row.type === "BUSINESS" ? (
                       <span className={badgeClass("blue")}>Business</span>
                     ) : (
-                      <span className={mutedText}>Individual</span>
+                      <span className="text-muted">Individual</span>
                     )}
                   </td>
-                  <td className={tdClass}>{row.address || "—"}</td>
-                  <td className={tdClass}>{row.contact || "—"}</td>
+                  <td className={tdClass}>{row.address || <span className="text-faint">—</span>}</td>
+                  <td className={tdClass}>{row.contact || <span className="text-faint">—</span>}</td>
                   {user.isMainAccount && (
-                    <td className={tdClass}>
+                    <td className={tdNum}>
                       {row.balance > 0 ? (
-                        <span className={badgeClass("red")}>
+                        <span className="text-negative">
                           AED {row.balance.toLocaleString("en-AE", { minimumFractionDigits: 2 })}
                         </span>
                       ) : (

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { deleteCustomerAction } from "@/actions/customers";
-import { btnSecondary, errorText } from "@/lib/ui/classNames";
+import { btnDanger, errorText } from "@/lib/ui/classNames";
 
 export function DeleteCustomerButton({ customerId }: { customerId: string }) {
   const [state, formAction, pending] = useActionState(
@@ -17,7 +17,7 @@ export function DeleteCustomerButton({ customerId }: { customerId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className={`${btnSecondary} border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50`}
+        className={btnDanger}
         onClick={(event) => {
           if (!confirm("Delete this customer? This cannot be undone.")) {
             event.preventDefault();

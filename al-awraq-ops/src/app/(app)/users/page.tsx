@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { requireMainAccount } from "@/lib/auth/appAuth";
 import {
   pageWrap,
+  pageHeader,
+  pageActions,
   pageTitle,
   pageSubtitle,
   btnPrimary,
@@ -11,7 +13,7 @@ import {
   thClass,
   tdClass,
   trHover,
-  link,
+  rowLink,
   badgeClass,
 } from "@/lib/ui/classNames";
 
@@ -23,27 +25,29 @@ export default async function UsersPage() {
   function accessSummary(user: (typeof users)[number]): string {
     if (user.isMainAccount) return "Full access";
     const parts: string[] = [];
-    if (user.canManageInvoices) parts.push("Manage Invoices");
-    else if (user.canViewInvoices) parts.push("View Invoices");
-    if (user.canManageCustomers) parts.push("Manage Customers");
-    else if (user.canViewCustomers) parts.push("View Customers");
-    if (user.canManageInquiries) parts.push("Manage Inquiries");
-    else if (user.canViewInquiries) parts.push("View Inquiries");
+    if (user.canManageInvoices) parts.push("Manage invoices");
+    else if (user.canViewInvoices) parts.push("View invoices");
+    if (user.canManageCustomers) parts.push("Manage customers");
+    else if (user.canViewCustomers) parts.push("View customers");
+    if (user.canManageInquiries) parts.push("Manage inquiries");
+    else if (user.canViewInquiries) parts.push("View inquiries");
     if (user.canManagePurchaseOrders) parts.push("Manage POs");
     else if (user.canViewPurchaseOrders) parts.push("View POs");
-    return parts.length > 0 ? parts.join(", ") : "No access yet";
+    return parts.length > 0 ? parts.join(" · ") : "No access yet";
   }
 
   return (
     <main className={pageWrap}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className={pageHeader}>
         <div>
           <h1 className={pageTitle}>Users</h1>
           <p className={pageSubtitle}>Accounts that can sign in to this app.</p>
         </div>
-        <Link href="/users/new" className={btnPrimary}>
-          + New Account
-        </Link>
+        <div className={pageActions}>
+          <Link href="/users/new" className={btnPrimary}>
+            New account
+          </Link>
+        </div>
       </div>
 
       <div className={tableWrap}>
@@ -59,11 +63,13 @@ export default async function UsersPage() {
             {users.map((user) => (
               <tr key={user.id} className={trHover}>
                 <td className={tdClass}>
-                  <Link href={`/users/${user.id}`} className={link}>
+                  <Link href={`/users/${user.id}`} className={rowLink}>
                     {user.name}
                   </Link>
                 </td>
-                <td className={tdClass}>{user.username}</td>
+                <td className={tdClass}>
+                  <span className="text-muted">@{user.username}</span>
+                </td>
                 <td className={tdClass}>
                   {user.isMainAccount ? (
                     <span className={badgeClass("blue")}>Main account</span>

@@ -1,21 +1,32 @@
 import Link from "next/link";
 import { requireMainAccount } from "@/lib/auth/appAuth";
 import { CreateUserForm } from "@/components/forms/CreateUserForm";
-import { pageWrap, pageTitle, pageSubtitle, cardClass, link } from "@/lib/ui/classNames";
+import {
+  pageWrap,
+  pageHeader,
+  pageTitle,
+  pageSubtitle,
+  backLink,
+  cardClass,
+} from "@/lib/ui/classNames";
 
 export default async function NewUserPage() {
   await requireMainAccount();
 
   return (
     <main className={pageWrap}>
-      <div>
-        <Link href="/users" className={link}>
-          ← Back to users
+      <div className="flex flex-col gap-4">
+        <Link href="/users" className={`${backLink} self-start`}>
+          ← Users
         </Link>
-        <h1 className={`${pageTitle} mt-2`}>New account</h1>
-        <p className={pageSubtitle}>Create a login and choose what it can access.</p>
+        <div className={pageHeader}>
+          <div>
+            <h1 className={pageTitle}>New account</h1>
+            <p className={pageSubtitle}>Create a login and choose what it can access.</p>
+          </div>
+        </div>
       </div>
-      <div className={`${cardClass} max-w-xl`}>
+      <div className={`${cardClass} max-w-2xl`}>
         <CreateUserForm />
       </div>
     </main>

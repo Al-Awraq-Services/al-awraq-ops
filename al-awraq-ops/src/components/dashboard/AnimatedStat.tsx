@@ -33,6 +33,7 @@ export function AnimatedStat({
   prefix = "",
   tone = "neutral",
   delay = 0,
+  className = statTile,
 }: {
   value: number;
   label: string;
@@ -40,6 +41,9 @@ export function AnimatedStat({
   prefix?: string;
   tone?: Tone;
   delay?: number;
+  /** Surface classes — defaults to a standalone stat tile; the dashboard
+   * passes plain cell padding when tiles sit inside one shared ledger strip. */
+  className?: string;
 }) {
   const motionValue = useMotionValue(0);
   const [display, setDisplay] = useState(0);
@@ -64,10 +68,10 @@ export function AnimatedStat({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-      className={statTile}
+      transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={className}
     >
       <div className={statLabel}>{label}</div>
       <div className={statValueClass(tone)}>

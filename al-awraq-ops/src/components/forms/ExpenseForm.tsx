@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { createExpenseAction, type ExpenseActionState } from "@/actions/expenses";
-import { btnPrimarySm, inputClass, labelClass, fieldWrap, errorText } from "@/lib/ui/classNames";
+import { btnPrimary, inputClass, labelClass, fieldWrap, errorText } from "@/lib/ui/classNames";
 
 function todayInputValue(): string {
   const now = new Date();
@@ -12,7 +12,7 @@ function todayInputValue(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/** Inline "+ Add expense" form on the Accounting Machine page (main-account-only). */
+/** Inline "Add expense" form on the Accounting Machine page (main-account-only). */
 export function ExpenseForm() {
   const [state, formAction, pending] = useActionState<ExpenseActionState, FormData>(
     createExpenseAction,
@@ -23,7 +23,7 @@ export function ExpenseForm() {
     <form
       action={formAction}
       key={state?.success ? "reset" : "form"}
-      className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr_1.5fr_auto_auto] sm:items-end"
+      className="grid grid-cols-1 gap-3 md:grid-cols-[auto_1fr_1.5fr_9rem_auto] md:items-end"
     >
       <div className={fieldWrap}>
         <label className={labelClass} htmlFor="expense-date">
@@ -87,10 +87,10 @@ export function ExpenseForm() {
           className={inputClass}
         />
       </div>
-      <button type="submit" disabled={pending} className={btnPrimarySm}>
-        {pending ? "Adding…" : "+ Add expense"}
+      <button type="submit" disabled={pending} className={btnPrimary}>
+        {pending ? "Adding…" : "Add expense"}
       </button>
-      {state?.error && <p className={`${errorText} sm:col-span-5`}>{state.error}</p>}
+      {state?.error && <p className={`${errorText} md:col-span-5`}>{state.error}</p>}
     </form>
   );
 }

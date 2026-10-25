@@ -4,18 +4,24 @@ import { requirePermission } from "@/lib/auth/appAuth";
 import { computeInvoiceTotals, toNum, formatMoney } from "@/lib/invoiceMath";
 import {
   pageWrap,
+  pageHeader,
+  pageActions,
   pageTitle,
   pageSubtitle,
+  backLink,
   btnPrimary,
+  btnSecondary,
   tableWrap,
   table,
   thClass,
+  thNum,
   tdClass,
+  tdNum,
   trHover,
-  link,
+  rowLink,
   badgeClass,
   inputClass,
-  mutedText,
+  emptyState,
 } from "@/lib/ui/classNames";
 
 /**
@@ -76,39 +82,43 @@ export default async function VendorsPage({
 
   return (
     <main className={pageWrap}>
-      <div>
-        <Link href="/purchase-orders" className={link}>
-          ← Back to Purchase Orders
+      <div className="flex flex-col gap-4">
+        <Link href="/purchase-orders" className={`${backLink} self-start`}>
+          ← Purchase orders
         </Link>
-      </div>
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className={pageTitle}>Vendors</h1>
-          <p className={pageSubtitle}>Your supplier address book — {vendors.length} on file.</p>
+        <div className={pageHeader}>
+          <div>
+            <h1 className={pageTitle}>Vendors</h1>
+            <p className={pageSubtitle}>Supplier address book, {vendors.length} on file.</p>
+          </div>
+          {(user.isMainAccount || user.canManagePurchaseOrders) && (
+            <div className={pageActions}>
+              <Link href="/vendors/new" className={btnPrimary}>
+                New vendor
+              </Link>
+            </div>
+          )}
         </div>
-        {(user.isMainAccount || user.canManagePurchaseOrders) && (
-          <Link href="/vendors/new" className={btnPrimary}>
-            + New Vendor
-          </Link>
-        )}
       </div>
 
-      <form className="flex max-w-sm gap-2" action="/vendors" method="get">
+      <form className="flex w-full max-w-md gap-2" action="/vendors" method="get">
         <input
           type="text"
           name="q"
-          placeholder="Search by name…"
+          placeholder="Search by name"
+          aria-label="Search vendors by name"
           defaultValue={query}
           className={inputClass}
         />
-        <button type="submit" className={btnPrimary}>
+        <button type="submit" className={btnSecondary}>
           Search
         </button>
       </form>
 
       {rows.length === 0 ? (
-        <p className={mutedText}>{query ? `No vendors match "${query}".` : "No vendors yet."}</p>
+        <div className={emptyState}>
+          {query ? `No vendors match "${query}".` : "No vendors yet."}
+        </div>
       ) : (
         <div className={tableWrap}>
           <table className={table}>
@@ -117,23 +127,23 @@ export default async function VendorsPage({
                 <th className={thClass}>Name</th>
                 <th className={thClass}>Address</th>
                 <th className={thClass}>Contact</th>
-                {user.isMainAccount && <th className={thClass}>Balance</th>}
+                {user.isMainAccount && <th className={thNum}>Balance</th>}
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className={trHover}>
                   <td className={tdClass}>
-                    <Link href={`/vendors/${row.id}`} className={link}>
+                    <Link href={`/vendors/${row.id}`} className={rowLink}>
                       {row.name}
                     </Link>
                   </td>
-                  <td className={tdClass}>{row.address || "—"}</td>
-                  <td className={tdClass}>{row.contact || "—"}</td>
+                  <td className={tdClass}>{row.address || <span className="text-faint">—</span>}</td>
+                  <td className={tdClass}>{row.contact || <span className="text-faint">—</span>}</td>
                   {user.isMainAccount && (
-                    <td className={tdClass}>
+                    <td className={tdNum}>
                       {row.balance > 0 ? (
-                        <span className={badgeClass("red")}>AED {formatMoney(row.balance)}</span>
+                        <span className="text-negative">AED {formatMoney(row.balance)}</span>
                       ) : (
                         <span className={badgeClass("green")}>Settled</span>
                       )}

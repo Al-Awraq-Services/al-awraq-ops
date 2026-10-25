@@ -8,18 +8,30 @@ import { DeleteCustomerButton } from "@/components/forms/DeleteCustomerButton";
 import { computeInvoiceTotals, formatMoney, toNum } from "@/lib/invoiceMath";
 import {
   pageWrap,
+  pageHeader,
   pageTitle,
   pageSubtitle,
+  eyebrow,
+  backLink,
   sectionTitle,
+  sectionHeader,
+  hintText,
   cardClass,
   tableWrap,
   table,
   thClass,
+  thNum,
   tdClass,
+  tdNum,
   trHover,
-  link,
+  rowLink,
   badgeClass,
-  mutedText,
+  statusLabel,
+  emptyState,
+  dlList,
+  dlRow,
+  dlTerm,
+  dlValue,
   statGrid,
   statTile,
   statLabel,
@@ -107,30 +119,35 @@ export default async function CustomerDetailPage({
     invoiceRows.reduce((sum, row) => sum + row.balanceDue, 0) +
     inquiryRows.reduce((sum, row) => sum + row.balanceDue, 0);
 
-  const statusTone = (status: string): "green" | "blue" | "red" =>
-    status === "PAID" ? "green" : status === "PARTIAL" ? "blue" : "red";
+  const statusTone = (status: string): "green" | "amber" | "neutral" =>
+    status === "PAID" ? "green" : status === "PARTIAL" ? "amber" : "neutral";
+
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString("en-AE", { year: "numeric", month: "short", day: "numeric" });
 
   return (
     <main className={pageWrap}>
-      <div>
-        <Link href="/customers" className={link}>
-          ← Back to customers
+      <div className="flex flex-col gap-4">
+        <Link href="/customers" className={`${backLink} self-start`}>
+          ← Customers
         </Link>
-        <div className="flex items-center gap-2 mt-2">
-          <h1 className={pageTitle}>{customer.name}</h1>
-          {customer.type === "BUSINESS" && <span className={badgeClass("blue")}>Business</span>}
+        <div className={pageHeader}>
+          <div>
+            <p className={eyebrow}>Customer</p>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <h1 className={pageTitle}>{customer.name}</h1>
+              {customer.type === "BUSINESS" && (
+                <span className={badgeClass("blue")}>Business</span>
+              )}
+            </div>
+            <p className={pageSubtitle}>
+              {customer.type === "BUSINESS" && customer.companyName
+                ? `${customer.companyName} · `
+                : ""}
+              Customer since {formatDate(customer.createdAt)}
+            </p>
+          </div>
         </div>
-        {customer.type === "BUSINESS" && customer.companyName && (
-          <p className={mutedText}>{customer.companyName}</p>
-        )}
-        <p className={pageSubtitle}>
-          Customer since{" "}
-          {customer.createdAt.toLocaleDateString("en-AE", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </p>
       </div>
 
       <div className={statGrid}>
@@ -152,8 +169,8 @@ export default async function CustomerDetailPage({
         )}
       </div>
 
-      <div className={`${cardClass} max-w-xl`}>
-        <h2 className={`${sectionTitle} mb-4`}>Details</h2>
+      <section className={`${cardClass} max-w-2xl`}>
+        <h2 className={`${sectionTitle} mb-5`}>Details</h2>
         {canManage ? (
           <CustomerForm
             mode="edit"
@@ -171,57 +188,59 @@ export default async function CustomerDetailPage({
             }}
           />
         ) : (
-          <dl className="flex flex-col gap-2 text-sm">
+          <dl className={dlList}>
             {customer.type === "BUSINESS" && (
               <>
                 {customer.companyName && (
-                  <div>
-                    <dt className={mutedText}>Company name</dt>
-                    <dd>{customer.companyName}</dd>
+                  <div className={dlRow}>
+                    <dt className={dlTerm}>Company name</dt>
+                    <dd className={dlValue}>{customer.companyName}</dd>
                   </div>
                 )}
                 {customer.businessTrn && (
-                  <div>
-                    <dt className={mutedText}>Business TRN</dt>
-                    <dd>{customer.businessTrn}</dd>
+                  <div className={dlRow}>
+                    <dt className={dlTerm}>Business TRN</dt>
+                    <dd className={dlValue}>{customer.businessTrn}</dd>
                   </div>
                 )}
                 {customer.contactPerson && (
-                  <div>
-                    <dt className={mutedText}>Contact person</dt>
-                    <dd>{customer.contactPerson}</dd>
+                  <div className={dlRow}>
+                    <dt className={dlTerm}>Contact person</dt>
+                    <dd className={dlValue}>{customer.contactPerson}</dd>
                   </div>
                 )}
               </>
             )}
-            <div>
-              <dt className={mutedText}>Address</dt>
-              <dd>{customer.address || "—"}</dd>
+            <div className={dlRow}>
+              <dt className={dlTerm}>Address</dt>
+              <dd className={dlValue}>{customer.address || "—"}</dd>
             </div>
-            <div>
-              <dt className={mutedText}>Contact</dt>
-              <dd>{customer.contact || "—"}</dd>
+            <div className={dlRow}>
+              <dt className={dlTerm}>Contact</dt>
+              <dd className={dlValue}>{customer.contact || "—"}</dd>
             </div>
             {customer.email && (
-              <div>
-                <dt className={mutedText}>Email</dt>
-                <dd>{customer.email}</dd>
+              <div className={dlRow}>
+                <dt className={dlTerm}>Email</dt>
+                <dd className={dlValue}>{customer.email}</dd>
               </div>
             )}
             {customer.notes && (
-              <div>
-                <dt className={mutedText}>Notes</dt>
-                <dd>{customer.notes}</dd>
+              <div className={dlRow}>
+                <dt className={dlTerm}>Notes</dt>
+                <dd className={`${dlValue} whitespace-pre-line`}>{customer.notes}</dd>
               </div>
             )}
           </dl>
         )}
-      </div>
+      </section>
 
-      <div>
-        <h2 className={`${sectionTitle} mb-3`}>Invoices</h2>
+      <section>
+        <div className={sectionHeader}>
+          <h2 className={sectionTitle}>Invoices</h2>
+        </div>
         {invoiceRows.length === 0 ? (
-          <p className={mutedText}>No invoices for this customer yet.</p>
+          <div className={emptyState}>No invoices for this customer yet.</div>
         ) : (
           <div className={tableWrap}>
             <table className={table}>
@@ -229,8 +248,8 @@ export default async function CustomerDetailPage({
                 <tr>
                   <th className={thClass}>Number</th>
                   <th className={thClass}>Date</th>
-                  <th className={thClass}>Total</th>
-                  <th className={thClass}>Balance</th>
+                  <th className={thNum}>Total</th>
+                  <th className={thNum}>Balance</th>
                   <th className={thClass}>Status</th>
                 </tr>
               </thead>
@@ -238,21 +257,17 @@ export default async function CustomerDetailPage({
                 {invoiceRows.map((row) => (
                   <tr key={row.id} className={trHover}>
                     <td className={tdClass}>
-                      <Link href={`/invoices/${row.id}`} className={link}>
+                      <Link href={`/invoices/${row.id}`} className={rowLink}>
                         {row.invoiceNumber}
                       </Link>
                     </td>
+                    <td className={tdClass}>{formatDate(row.invoiceDate)}</td>
+                    <td className={tdNum}>AED {formatMoney(row.grandTotal)}</td>
+                    <td className={tdNum}>AED {formatMoney(row.balanceDue)}</td>
                     <td className={tdClass}>
-                      {row.invoiceDate.toLocaleDateString("en-AE", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
-                    <td className={tdClass}>AED {formatMoney(row.grandTotal)}</td>
-                    <td className={tdClass}>AED {formatMoney(row.balanceDue)}</td>
-                    <td className={tdClass}>
-                      <span className={badgeClass(statusTone(row.status))}>{row.status}</span>
+                      <span className={badgeClass(statusTone(row.status))}>
+                        {statusLabel(row.status)}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -260,13 +275,15 @@ export default async function CustomerDetailPage({
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {(user.isMainAccount || user.canViewInquiries) && (
-        <div>
-          <h2 className={`${sectionTitle} mb-3`}>Inquiries</h2>
+        <section>
+          <div className={sectionHeader}>
+            <h2 className={sectionTitle}>Inquiries</h2>
+          </div>
           {inquiryRows.length === 0 ? (
-            <p className={mutedText}>No inquiries for this customer yet.</p>
+            <div className={emptyState}>No inquiries for this customer yet.</div>
           ) : (
             <div className={tableWrap}>
               <table className={table}>
@@ -274,8 +291,8 @@ export default async function CustomerDetailPage({
                   <tr>
                     <th className={thClass}>Number</th>
                     <th className={thClass}>Date</th>
-                    <th className={thClass}>Total</th>
-                    <th className={thClass}>Balance</th>
+                    <th className={thNum}>Total</th>
+                    <th className={thNum}>Balance</th>
                     <th className={thClass}>Status</th>
                   </tr>
                 </thead>
@@ -283,21 +300,17 @@ export default async function CustomerDetailPage({
                   {inquiryRows.map((row) => (
                     <tr key={row.id} className={trHover}>
                       <td className={tdClass}>
-                        <Link href={`/inquiries/${row.id}`} className={link}>
+                        <Link href={`/inquiries/${row.id}`} className={rowLink}>
                           {row.inquiryNumber}
                         </Link>
                       </td>
+                      <td className={tdClass}>{formatDate(row.inquiryDate)}</td>
+                      <td className={tdNum}>AED {formatMoney(row.grandTotal)}</td>
+                      <td className={tdNum}>AED {formatMoney(row.balanceDue)}</td>
                       <td className={tdClass}>
-                        {row.inquiryDate.toLocaleDateString("en-AE", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td className={tdClass}>AED {formatMoney(row.grandTotal)}</td>
-                      <td className={tdClass}>AED {formatMoney(row.balanceDue)}</td>
-                      <td className={tdClass}>
-                        <span className={badgeClass(statusTone(row.status))}>{row.status}</span>
+                        <span className={badgeClass(statusTone(row.status))}>
+                          {statusLabel(row.status)}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -305,17 +318,21 @@ export default async function CustomerDetailPage({
               </table>
             </div>
           )}
-        </div>
+        </section>
       )}
 
       {canManage && (
-        <div className={cardClass}>
-          <h2 className={`${sectionTitle} mb-3`}>Danger zone</h2>
-          <p className={`${mutedText} mb-3`}>
-            A customer with existing invoices or inquiries cannot be deleted.
-          </p>
+        <section
+          className={`${cardClass} flex max-w-2xl flex-wrap items-center justify-between gap-4`}
+        >
+          <div>
+            <h2 className={sectionTitle}>Delete customer</h2>
+            <p className={`${hintText} mt-1`}>
+              Only possible while the customer has no invoices or inquiries.
+            </p>
+          </div>
           <DeleteCustomerButton customerId={customer.id} />
-        </div>
+        </section>
       )}
     </main>
   );

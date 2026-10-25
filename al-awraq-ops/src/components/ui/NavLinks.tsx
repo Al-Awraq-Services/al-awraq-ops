@@ -2,19 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Calculator,
-  Receipt,
-  Building2,
-  Users,
-  ClipboardList,
-  Settings as SettingsIcon,
-  UserCog,
-  type LucideIcon,
-} from "lucide-react";
 
-type NavItem = { href: string; label: string; icon: LucideIcon };
+type NavItem = { href: string; label: string };
 
 export type NavPermissions = {
   isMainAccount: boolean;
@@ -29,7 +18,10 @@ export type NavPermissions = {
  * links this account can actually use — Dashboard, Accounting, and Users
  * are always main-account-only (a hard rule, not a toggle; see
  * appAuth.ts), everything else depends on that account's own canView…
- * flags (main always passes, same as every server-side guard). */
+ * flags (main always passes, same as every server-side guard).
+ *
+ * Text-only tabs with an ink underline on the active one, sitting on the
+ * header's bottom rule — quieter than the previous icon pills. */
 export function NavLinks({
   isMainAccount,
   canViewInvoices,
@@ -40,40 +32,33 @@ export function NavLinks({
   const pathname = usePathname();
 
   const items: NavItem[] = [
-    ...(isMainAccount ? [{ href: "/", label: "Dashboard", icon: LayoutDashboard }] : []),
-    ...(isMainAccount ? [{ href: "/accounting", label: "Accounting", icon: Calculator }] : []),
-    ...(isMainAccount || canViewInvoices
-      ? [{ href: "/invoices", label: "Invoices", icon: Receipt }]
-      : []),
-    ...(isMainAccount || canViewInquiries
-      ? [{ href: "/inquiries", label: "Inquiries", icon: ClipboardList }]
-      : []),
+    ...(isMainAccount ? [{ href: "/", label: "Overview" }] : []),
+    ...(isMainAccount || canViewInvoices ? [{ href: "/invoices", label: "Invoices" }] : []),
+    ...(isMainAccount || canViewInquiries ? [{ href: "/inquiries", label: "Inquiries" }] : []),
     ...(isMainAccount || canViewPurchaseOrders
-      ? [{ href: "/purchase-orders", label: "Purchase Orders", icon: Building2 }]
+      ? [{ href: "/purchase-orders", label: "Purchase orders" }]
       : []),
-    ...(isMainAccount || canViewCustomers
-      ? [{ href: "/customers", label: "Customers", icon: Users }]
-      : []),
-    { href: "/settings", label: "Settings", icon: SettingsIcon },
-    ...(isMainAccount ? [{ href: "/users", label: "Users", icon: UserCog }] : []),
+    ...(isMainAccount || canViewCustomers ? [{ href: "/customers", label: "Customers" }] : []),
+    ...(isMainAccount ? [{ href: "/accounting", label: "Accounting" }] : []),
+    ...(isMainAccount ? [{ href: "/users", label: "Users" }] : []),
+    { href: "/settings", label: "Settings" },
   ];
 
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-0.5">
-      {items.map(({ href, label, icon: Icon }) => {
+    <nav aria-label="Main" className="-mb-px flex items-center gap-6 overflow-x-auto whitespace-nowrap">
+      {items.map(({ href, label }) => {
         const isActive = href === "/" ? pathname === href : pathname.startsWith(href);
         return (
           <Link
             key={href}
             href={href}
             aria-current={isActive ? "page" : undefined}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+            className={`relative py-2.5 text-[13.5px] font-medium transition-colors duration-150 after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:rounded-full after:transition-colors after:content-[''] ${
               isActive
-                ? "bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-                : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                ? "text-ink after:bg-ink"
+                : "text-muted after:bg-transparent hover:text-ink hover:after:bg-line-strong"
             }`}
           >
-            <Icon className="h-4 w-4" strokeWidth={2} />
             {label}
           </Link>
         );

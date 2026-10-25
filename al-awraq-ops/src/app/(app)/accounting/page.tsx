@@ -1,23 +1,30 @@
 import { db } from "@/lib/db";
 import { requireMainAccount } from "@/lib/auth/appAuth";
 import { toNum, round2, formatMoney } from "@/lib/invoiceMath";
-import { AnimatedStat } from "@/components/dashboard/AnimatedStat";
 import { ProfitTrendChart, type ProfitTrendPoint } from "@/components/accounting/ProfitTrendChart";
 import { RevenueCostBreakdownChart } from "@/components/accounting/RevenueCostBreakdownChart";
 import { ExpenseForm } from "@/components/forms/ExpenseForm";
 import { DeleteExpenseButton } from "@/components/forms/DeleteExpenseButton";
 import {
   pageWrap,
+  pageHeader,
   pageTitle,
   pageSubtitle,
   sectionTitle,
-  statGrid,
+  sectionHeader,
+  hintText,
+  cardClass,
+  emptyState,
+  statTile,
+  statLabel,
+  statValueClass,
   tableWrap,
   table,
   thClass,
+  thNum,
   tdClass,
+  tdNum,
   trHover,
-  mutedText,
 } from "@/lib/ui/classNames";
 
 function money(n: number): string {
@@ -108,70 +115,85 @@ export default async function AccountingPage() {
     amount: toNum(e.amount),
   }));
 
+  // Headline P&L tiles — static figures (no count-up) so the numbers read
+  // like a statement, each with a one-line note on what it's made of.
+  const headline: Array<{
+    label: string;
+    value: string;
+    tone: "green" | "red" | "neutral";
+    note: string;
+  }> = [
+    {
+      label: "Revenue collected",
+      value: money(revenueCollected),
+      tone: "green",
+      note: "Paid on invoices and inquiries",
+    },
+    {
+      label: "Total cost",
+      value: money(totalCost),
+      tone: "red",
+      note: "Expenses plus purchase order payments",
+    },
+    {
+      label: "Net profit",
+      value: money(netProfit),
+      tone: netProfit >= 0 ? "green" : "red",
+      note: "Revenue collected minus total cost",
+    },
+    {
+      label: "Margin",
+      value: `${marginPercent.toFixed(1)}%`,
+      tone: "neutral",
+      note: "Net profit as a share of revenue",
+    },
+  ];
+
   return (
     <main className={pageWrap}>
-      <div>
-        <h1 className={pageTitle}>Accounting</h1>
-        <p className={pageSubtitle}>
-          The whole number game — cash actually collected minus cash actually spent.
-        </p>
-      </div>
-
-      <div className={statGrid}>
-        <AnimatedStat
-          label="Revenue collected"
-          value={revenueCollected}
-          format="money"
-          prefix="AED "
-          tone="green"
-          delay={0}
-        />
-        <AnimatedStat
-          label="Total cost"
-          value={totalCost}
-          format="money"
-          prefix="AED "
-          tone="red"
-          delay={0.05}
-        />
-        <AnimatedStat
-          label="Net profit"
-          value={netProfit}
-          format="money"
-          prefix="AED "
-          tone={netProfit >= 0 ? "green" : "red"}
-          delay={0.1}
-        />
-        <AnimatedStat
-          label="Margin"
-          value={marginPercent}
-          format="percent"
-          tone="blue"
-          delay={0.15}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="lg:col-span-2">
-          <ProfitTrendChart data={profitTrend} />
-        </div>
-        <div className="lg:col-span-2">
-          <RevenueCostBreakdownChart
-            invoiceRevenue={invoiceRevenue}
-            inquiryRevenue={inquiryRevenue}
-            expenseCost={expenseCost}
-            purchaseOrderCost={purchaseOrderCost}
-          />
+      <div className={pageHeader}>
+        <div>
+          <h1 className={pageTitle}>Accounting</h1>
+          <p className={pageSubtitle}>
+            Cash basis: money actually collected minus money actually paid out.
+          </p>
         </div>
       </div>
 
-      <div>
-        <h2 className={`${sectionTitle} mb-3`}>Expenses</h2>
-        <div className="mb-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {headline.map((stat) => (
+          <div key={stat.label} className={statTile}>
+            <div className={statLabel}>{stat.label}</div>
+            <div className={statValueClass(stat.tone)}>{stat.value}</div>
+            <p className={`${hintText} mt-2`}>{stat.note}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-6">
+        <ProfitTrendChart data={profitTrend} />
+        <RevenueCostBreakdownChart
+          invoiceRevenue={invoiceRevenue}
+          inquiryRevenue={inquiryRevenue}
+          expenseCost={expenseCost}
+          purchaseOrderCost={purchaseOrderCost}
+        />
+      </div>
+
+      <section className="flex flex-col gap-4">
+        <div className={sectionHeader}>
+          <h2 className={sectionTitle}>Expenses</h2>
+          {expenseRows.length > 0 && (
+            <span className={hintText}>
+              {expenseRows.length} logged, {money(expenseCost)} in total
+            </span>
+          )}
+        </div>
+        <div className={cardClass}>
           <ExpenseForm />
         </div>
         {expenseRows.length === 0 ? (
-          <p className={mutedText}>No expenses logged yet.</p>
+          <div className={emptyState}>No expenses logged yet.</div>
         ) : (
           <div className={tableWrap}>
             <table className={table}>
@@ -180,14 +202,16 @@ export default async function AccountingPage() {
                   <th className={thClass}>Date</th>
                   <th className={thClass}>Category</th>
                   <th className={thClass}>Description</th>
-                  <th className={thClass}>Amount</th>
-                  <th className={thClass} />
+                  <th className={thNum}>Amount</th>
+                  <th className={thNum}>
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {expenseRows.map((e) => (
                   <tr key={e.id} className={trHover}>
-                    <td className={tdClass}>
+                    <td className={`${tdClass} whitespace-nowrap`}>
                       {e.date.toLocaleDateString("en-AE", {
                         year: "numeric",
                         month: "short",
@@ -195,9 +219,11 @@ export default async function AccountingPage() {
                       })}
                     </td>
                     <td className={tdClass}>{e.category}</td>
-                    <td className={tdClass}>{e.description || <span className={mutedText}>—</span>}</td>
-                    <td className={tdClass}>{money(e.amount)}</td>
                     <td className={tdClass}>
+                      {e.description || <span className="text-faint">—</span>}
+                    </td>
+                    <td className={tdNum}>{money(e.amount)}</td>
+                    <td className={tdNum}>
                       <DeleteExpenseButton expenseId={e.id} />
                     </td>
                   </tr>
@@ -206,7 +232,7 @@ export default async function AccountingPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
     </main>
   );
 }

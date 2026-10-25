@@ -14,24 +14,39 @@ import { updateInvoiceAction, recordPaymentAction, deleteInvoiceAction } from "@
 import { InvoiceForm, type InvoiceFormValues } from "@/components/forms/InvoiceForm";
 import {
   pageWrap,
+  pageHeader,
+  pageActions,
   pageTitle,
   pageSubtitle,
+  eyebrow,
+  backLink,
   sectionTitle,
   cardClass,
   tableWrap,
   table,
   thClass,
+  thNum,
   tdClass,
+  tdNum,
   link,
-  linkDanger,
   btnSecondary,
+  btnDanger,
   inputClass,
+  labelClass,
+  fieldWrap,
   mutedText,
+  hintText,
   badgeClass,
+  statusLabel,
   statGrid,
   statTile,
   statLabel,
   statValueClass,
+  dlList,
+  dlRow,
+  dlTerm,
+  dlValue,
+  dlTotalRow,
 } from "@/lib/ui/classNames";
 
 /**
@@ -58,9 +73,9 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString("en-AE", { year: "numeric", month: "short", day: "numeric" });
 }
 
-function statusTone(status: "UNPAID" | "PARTIAL" | "PAID"): "green" | "blue" | "neutral" {
+function statusTone(status: "UNPAID" | "PARTIAL" | "PAID"): "green" | "amber" | "neutral" {
   if (status === "PAID") return "green";
-  if (status === "PARTIAL") return "blue";
+  if (status === "PARTIAL") return "amber";
   return "neutral";
 }
 
@@ -168,32 +183,41 @@ export default async function InvoiceDetailPage({
 
   return (
     <main className={pageWrap}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link href="/invoices" className={link}>
-            ← Back to invoices
-          </Link>
-          <h1 className={`${pageTitle} mt-2`}>Invoice {invoice.invoiceNumber}</h1>
-          <p className={pageSubtitle}>{invoice.billingName}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className={badgeClass(statusTone(totals.status))}>{totals.status}</span>
-          <a
-            href={`/api/invoices/${invoice.id}/pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={btnSecondary}
-          >
-            Download PDF
-          </a>
-          {canManage && (
-            <Link
-              href={isEditing ? `/invoices/${invoice.id}` : `/invoices/${invoice.id}?edit=1`}
+      <div>
+        <Link href="/invoices" className={backLink}>
+          ← Invoices
+        </Link>
+        <div className={`${pageHeader} mt-4`}>
+          <div>
+            <p className={eyebrow}>Invoice</p>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <h1 className={pageTitle}>{invoice.invoiceNumber}</h1>
+              <span className={badgeClass(statusTone(totals.status))}>
+                {statusLabel(totals.status)}
+              </span>
+            </div>
+            <p className={pageSubtitle}>
+              {invoice.billingName} · {formatDate(invoice.invoiceDate)}
+            </p>
+          </div>
+          <div className={pageActions}>
+            <a
+              href={`/api/invoices/${invoice.id}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
               className={btnSecondary}
             >
-              {isEditing ? "Cancel edit" : "Edit"}
-            </Link>
-          )}
+              Download PDF
+            </a>
+            {canManage && (
+              <Link
+                href={isEditing ? `/invoices/${invoice.id}` : `/invoices/${invoice.id}?edit=1`}
+                className={btnSecondary}
+              >
+                {isEditing ? "Cancel edit" : "Edit"}
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
@@ -232,81 +256,83 @@ export default async function InvoiceDetailPage({
           <div className="grid gap-6 sm:grid-cols-2">
             <div className={cardClass}>
               <h2 className={`${sectionTitle} mb-3`}>Billed to</h2>
-              <p className="font-medium text-neutral-900">{invoice.billingName}</p>
+              <p className="font-medium text-ink">{invoice.billingName}</p>
               {invoice.billingAddress && (
-                <p className={mutedText}>{invoice.billingAddress}</p>
+                <p className={`${mutedText} mt-1`}>{invoice.billingAddress}</p>
               )}
               {invoice.billingContact && <p className={mutedText}>{invoice.billingContact}</p>}
-              <p className="mt-2">
+              <p className="mt-4">
                 <Link href={`/customers/${invoice.customerId}`} className={link}>
                   View customer
                 </Link>
               </p>
             </div>
             <div className={cardClass}>
-              <h2 className={`${sectionTitle} mb-3`}>Invoice info</h2>
-              <dl className="flex flex-col gap-1 text-sm">
-                <div className="flex justify-between">
-                  <dt className={mutedText}>Invoice date</dt>
-                  <dd>{formatDate(invoice.invoiceDate)}</dd>
+              <h2 className={`${sectionTitle} mb-2`}>Details</h2>
+              <dl className={dlList}>
+                <div className={dlRow}>
+                  <dt className={dlTerm}>Invoice date</dt>
+                  <dd className={dlValue}>{formatDate(invoice.invoiceDate)}</dd>
                 </div>
                 {invoice.dueDate && (
-                  <div className="flex justify-between">
-                    <dt className={mutedText}>Due date</dt>
-                    <dd>{formatDate(invoice.dueDate)}</dd>
+                  <div className={dlRow}>
+                    <dt className={dlTerm}>Due date</dt>
+                    <dd className={dlValue}>{formatDate(invoice.dueDate)}</dd>
                   </div>
                 )}
                 {invoice.poNumber && (
-                  <div className="flex justify-between">
-                    <dt className={mutedText}>PO number</dt>
-                    <dd>{invoice.poNumber}</dd>
+                  <div className={dlRow}>
+                    <dt className={dlTerm}>PO number</dt>
+                    <dd className={dlValue}>{invoice.poNumber}</dd>
                   </div>
                 )}
                 {invoice.paymentMethod && (
-                  <div className="flex justify-between">
-                    <dt className={mutedText}>Payment method</dt>
-                    <dd>{invoice.paymentMethod}</dd>
+                  <div className={dlRow}>
+                    <dt className={dlTerm}>Payment method</dt>
+                    <dd className={dlValue}>{invoice.paymentMethod}</dd>
                   </div>
                 )}
                 {invoice.salesperson && (
-                  <div className="flex justify-between">
-                    <dt className={mutedText}>Salesperson</dt>
-                    <dd>{invoice.salesperson}</dd>
+                  <div className={dlRow}>
+                    <dt className={dlTerm}>Salesperson</dt>
+                    <dd className={dlValue}>{invoice.salesperson}</dd>
                   </div>
                 )}
               </dl>
             </div>
           </div>
 
-          <div>
-            <h2 className={`${sectionTitle} mb-3`}>Items</h2>
+          <section>
+            <h2 className={`${sectionTitle} mb-3`}>Line items</h2>
             <div className={tableWrap}>
               <table className={table}>
                 <thead>
                   <tr>
-                    <th className={thClass}>Sr</th>
+                    <th className={thNum}>#</th>
                     <th className={thClass}>Description</th>
-                    <th className={thClass}>Qty</th>
+                    <th className={thNum}>Qty</th>
                     <th className={thClass}>Unit</th>
-                    <th className={thClass}>Unit price</th>
-                    <th className={thClass}>Retention</th>
-                    <th className={thClass}>Subtotal</th>
-                    <th className={thClass}>Total</th>
+                    <th className={thNum}>Unit price</th>
+                    <th className={thNum}>Retention</th>
+                    <th className={thNum}>Subtotal</th>
+                    <th className={thNum}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {plainItems.map((item, index) => (
                     <tr key={item.id}>
-                      <td className={tdClass}>{index + 1}</td>
+                      <td className={tdNum}>
+                        <span className="text-muted">{index + 1}</span>
+                      </td>
                       <td className={tdClass}>{item.description}</td>
-                      <td className={tdClass}>{item.quantity}</td>
+                      <td className={tdNum}>{item.quantity}</td>
                       <td className={tdClass}>{item.unit || "—"}</td>
-                      <td className={tdClass}>AED {formatMoney(item.unitPrice)}</td>
-                      <td className={tdClass}>
+                      <td className={tdNum}>AED {formatMoney(item.unitPrice)}</td>
+                      <td className={tdNum}>
                         {item.retentionAmount ? `AED ${formatMoney(item.retentionAmount)}` : "—"}
                       </td>
-                      <td className={tdClass}>AED {formatMoney(lineSubtotal(item))}</td>
-                      <td className={tdClass}>
+                      <td className={tdNum}>AED {formatMoney(lineSubtotal(item))}</td>
+                      <td className={tdNum}>
                         AED {formatMoney(lineTotal(item, adjustments.taxRatePercent))}
                       </td>
                     </tr>
@@ -314,68 +340,74 @@ export default async function InvoiceDetailPage({
                 </tbody>
               </table>
             </div>
-          </div>
+          </section>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className={`${cardClass} max-w-md`}>
-              <h2 className={`${sectionTitle} mb-3`}>Totals</h2>
-              <dl className="flex flex-col gap-1.5 text-sm">
-                <div className="flex justify-between">
-                  <dt className={mutedText}>Subtotal</dt>
-                  <dd>AED {formatMoney(totals.itemsSubtotal)}</dd>
+          <div className="grid items-start gap-6 sm:grid-cols-2">
+            <div className={cardClass}>
+              <h2 className={`${sectionTitle} mb-2`}>Totals</h2>
+              <dl className={dlList}>
+                <div className={dlRow}>
+                  <dt className={dlTerm}>Subtotal</dt>
+                  <dd className={dlValue}>AED {formatMoney(totals.itemsSubtotal)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className={mutedText}>Discount</dt>
-                  <dd>AED {formatMoney(totals.discount)}</dd>
+                <div className={dlRow}>
+                  <dt className={dlTerm}>Discount</dt>
+                  <dd className={dlValue}>AED {formatMoney(totals.discount)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className={mutedText}>Taxable</dt>
-                  <dd>AED {formatMoney(totals.taxableBase)}</dd>
+                <div className={dlRow}>
+                  <dt className={dlTerm}>Taxable</dt>
+                  <dd className={dlValue}>AED {formatMoney(totals.taxableBase)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className={mutedText}>VAT {adjustments.taxRatePercent}%</dt>
-                  <dd>AED {formatMoney(totals.taxAmount)}</dd>
+                <div className={dlRow}>
+                  <dt className={dlTerm}>VAT {adjustments.taxRatePercent}%</dt>
+                  <dd className={dlValue}>AED {formatMoney(totals.taxAmount)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className={mutedText}>Shipment</dt>
-                  <dd>AED {formatMoney(totals.shipment)}</dd>
+                <div className={dlRow}>
+                  <dt className={dlTerm}>Shipment</dt>
+                  <dd className={dlValue}>AED {formatMoney(totals.shipment)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className={mutedText}>Stamp duty</dt>
-                  <dd>AED {formatMoney(totals.stampDuty)}</dd>
-                </div>
-                <div className="mt-1 flex justify-between border-t border-neutral-200 pt-1.5 text-base font-semibold">
-                  <dt>Total</dt>
-                  <dd>AED {formatMoney(totals.grandTotal)}</dd>
-                </div>
-                {user.isMainAccount && (
-                  <div className="flex justify-between">
-                    <dt className={mutedText}>Previous balance</dt>
-                    <dd>AED {formatMoney(previousBalance)}</dd>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <dt className={mutedText}>Paid</dt>
-                  <dd>AED {formatMoney(totals.amountPaid)}</dd>
-                </div>
-                <div className="flex justify-between font-semibold">
-                  <dt>Balance due</dt>
-                  <dd>AED {formatMoney(totals.balanceDue)}</dd>
+                <div className={dlRow}>
+                  <dt className={dlTerm}>Stamp duty</dt>
+                  <dd className={dlValue}>AED {formatMoney(totals.stampDuty)}</dd>
                 </div>
               </dl>
-              {invoice.notes && <p className={`${mutedText} mt-3`}>{invoice.notes}</p>}
+              <dl className={dlList}>
+                <div className={dlTotalRow}>
+                  <dt>Total</dt>
+                  <dd className="tabular-nums">AED {formatMoney(totals.grandTotal)}</dd>
+                </div>
+                {user.isMainAccount && (
+                  <div className={dlRow}>
+                    <dt className={dlTerm}>Previous balance</dt>
+                    <dd className={dlValue}>AED {formatMoney(previousBalance)}</dd>
+                  </div>
+                )}
+                <div className={dlRow}>
+                  <dt className={dlTerm}>Paid</dt>
+                  <dd className={dlValue}>AED {formatMoney(totals.amountPaid)}</dd>
+                </div>
+                <div className={dlRow}>
+                  <dt className="font-semibold text-ink">Balance due</dt>
+                  <dd className="text-right font-semibold text-ink tabular-nums">
+                    AED {formatMoney(totals.balanceDue)}
+                  </dd>
+                </div>
+              </dl>
+              {invoice.notes && (
+                <p className={`${mutedText} mt-4 border-t border-line pt-4`}>{invoice.notes}</p>
+              )}
             </div>
 
             {canManage && (
               <div className={cardClass}>
-                <h2 className={`${sectionTitle} mb-3`}>Payment</h2>
+                <h2 className={`${sectionTitle} mb-4`}>Payment</h2>
                 <form
                   action={submitPayment.bind(null, invoice.id)}
                   className="flex flex-wrap items-end gap-2"
                 >
-                  <div className={`flex flex-col gap-1.5`}>
-                    <label className="text-sm font-medium text-neutral-700" htmlFor="amountPaid">
-                      Amount paid
+                  <div className={fieldWrap}>
+                    <label className={labelClass} htmlFor="amountPaid">
+                      Amount paid (AED)
                     </label>
                     <input
                       id="amountPaid"
@@ -384,24 +416,25 @@ export default async function InvoiceDetailPage({
                       step="0.01"
                       min="0"
                       defaultValue={totals.amountPaid}
-                      className={`${inputClass} w-36`}
+                      className={`${inputClass} w-40 text-right`}
                     />
                   </div>
                   <button type="submit" className={btnSecondary}>
                     Record payment
                   </button>
                 </form>
-                <form action={submitPayment.bind(null, invoice.id)} className="mt-2">
+                <p className={`${hintText} mt-2`}>Enter the total received to date.</p>
+                <form action={submitPayment.bind(null, invoice.id)} className="mt-4">
                   <input type="hidden" name="amountPaid" value={totals.grandTotal} />
                   <button type="submit" className={btnSecondary}>
                     Mark paid in full
                   </button>
                 </form>
 
-                <div className="mt-6 border-t border-neutral-200 pt-4">
-                  <h3 className="mb-2 text-sm font-semibold text-neutral-900">Danger zone</h3>
+                <div className="mt-6 flex flex-col items-start gap-3 border-t border-line pt-5">
+                  <p className={hintText}>Deleting an invoice can&apos;t be undone.</p>
                   <form action={deleteInvoiceAction.bind(null, invoice.id)}>
-                    <button type="submit" className={linkDanger}>
+                    <button type="submit" className={btnDanger}>
                       Delete invoice
                     </button>
                   </form>

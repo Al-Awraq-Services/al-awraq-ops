@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { deleteVendorAction } from "@/actions/vendors";
-import { btnSecondary, errorText } from "@/lib/ui/classNames";
+import { btnDanger, errorText } from "@/lib/ui/classNames";
 
 export function DeleteVendorButton({ vendorId }: { vendorId: string }) {
   const [state, formAction, pending] = useActionState(
@@ -17,7 +17,7 @@ export function DeleteVendorButton({ vendorId }: { vendorId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className={`${btnSecondary} border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50`}
+        className={btnDanger}
         onClick={(event) => {
           if (!confirm("Delete this vendor? This cannot be undone.")) {
             event.preventDefault();

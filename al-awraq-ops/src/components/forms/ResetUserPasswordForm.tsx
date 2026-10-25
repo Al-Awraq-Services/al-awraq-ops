@@ -11,8 +11,8 @@ export function ResetUserPasswordForm({ userId }: { userId: string }) {
   );
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-2">
-      <div className={fieldWrap}>
+    <form action={formAction} className="flex flex-wrap items-end gap-3">
+      <div className={`${fieldWrap} w-full sm:w-64`}>
         <label className={labelClass} htmlFor="password">
           New password
         </label>
@@ -23,7 +23,7 @@ export function ResetUserPasswordForm({ userId }: { userId: string }) {
           required
           minLength={8}
           autoComplete="new-password"
-          className={`${inputClass} w-48`}
+          className={inputClass}
         />
       </div>
       <button type="submit" disabled={pending} className={btnSecondary}>
@@ -31,7 +31,7 @@ export function ResetUserPasswordForm({ userId }: { userId: string }) {
       </button>
       {state?.error && <p className={`${errorText} w-full`}>{state.error}</p>}
       {state?.success && (
-        <p className="w-full text-sm font-medium text-emerald-700">Password reset.</p>
+        <p className="w-full text-[13px] font-medium text-positive">Password reset.</p>
       )}
     </form>
   );

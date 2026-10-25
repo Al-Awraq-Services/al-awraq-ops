@@ -8,18 +8,30 @@ import { DeleteVendorButton } from "@/components/forms/DeleteVendorButton";
 import { computeInvoiceTotals, formatMoney, toNum } from "@/lib/invoiceMath";
 import {
   pageWrap,
+  pageHeader,
   pageTitle,
   pageSubtitle,
+  eyebrow,
+  backLink,
   sectionTitle,
+  sectionHeader,
+  hintText,
   cardClass,
   tableWrap,
   table,
   thClass,
+  thNum,
   tdClass,
+  tdNum,
   trHover,
-  link,
+  rowLink,
   badgeClass,
-  mutedText,
+  statusLabel,
+  emptyState,
+  dlList,
+  dlRow,
+  dlTerm,
+  dlValue,
   statGrid,
   statTile,
   statLabel,
@@ -74,24 +86,25 @@ export default async function VendorDetailPage({
 
   const totalBalance = poRows.reduce((sum, row) => sum + row.balanceDue, 0);
 
-  const statusTone = (status: string): "green" | "blue" | "red" =>
-    status === "PAID" ? "green" : status === "PARTIAL" ? "blue" : "red";
+  const statusTone = (status: string): "green" | "amber" | "neutral" =>
+    status === "PAID" ? "green" : status === "PARTIAL" ? "amber" : "neutral";
+
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString("en-AE", { year: "numeric", month: "short", day: "numeric" });
 
   return (
     <main className={pageWrap}>
-      <div>
-        <Link href="/vendors" className={link}>
-          ← Back to vendors
+      <div className="flex flex-col gap-4">
+        <Link href="/vendors" className={`${backLink} self-start`}>
+          ← Vendors
         </Link>
-        <h1 className={`${pageTitle} mt-2`}>{vendor.name}</h1>
-        <p className={pageSubtitle}>
-          Vendor since{" "}
-          {vendor.createdAt.toLocaleDateString("en-AE", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </p>
+        <div className={pageHeader}>
+          <div>
+            <p className={eyebrow}>Vendor</p>
+            <h1 className={`${pageTitle} mt-1`}>{vendor.name}</h1>
+            <p className={pageSubtitle}>Vendor since {formatDate(vendor.createdAt)}</p>
+          </div>
+        </div>
       </div>
 
       <div className={statGrid}>
@@ -109,8 +122,8 @@ export default async function VendorDetailPage({
         )}
       </div>
 
-      <div className={`${cardClass} max-w-xl`}>
-        <h2 className={`${sectionTitle} mb-4`}>Details</h2>
+      <section className={`${cardClass} max-w-2xl`}>
+        <h2 className={`${sectionTitle} mb-5`}>Details</h2>
         {canManage ? (
           <VendorForm
             mode="edit"
@@ -124,35 +137,37 @@ export default async function VendorDetailPage({
             }}
           />
         ) : (
-          <dl className="flex flex-col gap-2 text-sm">
-            <div>
-              <dt className={mutedText}>Address</dt>
-              <dd>{vendor.address || "—"}</dd>
+          <dl className={dlList}>
+            <div className={dlRow}>
+              <dt className={dlTerm}>Address</dt>
+              <dd className={dlValue}>{vendor.address || "—"}</dd>
             </div>
-            <div>
-              <dt className={mutedText}>Contact</dt>
-              <dd>{vendor.contact || "—"}</dd>
+            <div className={dlRow}>
+              <dt className={dlTerm}>Contact</dt>
+              <dd className={dlValue}>{vendor.contact || "—"}</dd>
             </div>
             {vendor.email && (
-              <div>
-                <dt className={mutedText}>Email</dt>
-                <dd>{vendor.email}</dd>
+              <div className={dlRow}>
+                <dt className={dlTerm}>Email</dt>
+                <dd className={dlValue}>{vendor.email}</dd>
               </div>
             )}
             {vendor.notes && (
-              <div>
-                <dt className={mutedText}>Notes</dt>
-                <dd>{vendor.notes}</dd>
+              <div className={dlRow}>
+                <dt className={dlTerm}>Notes</dt>
+                <dd className={`${dlValue} whitespace-pre-line`}>{vendor.notes}</dd>
               </div>
             )}
           </dl>
         )}
-      </div>
+      </section>
 
-      <div>
-        <h2 className={`${sectionTitle} mb-3`}>Purchase orders</h2>
+      <section>
+        <div className={sectionHeader}>
+          <h2 className={sectionTitle}>Purchase orders</h2>
+        </div>
         {poRows.length === 0 ? (
-          <p className={mutedText}>No purchase orders for this vendor yet.</p>
+          <div className={emptyState}>No purchase orders for this vendor yet.</div>
         ) : (
           <div className={tableWrap}>
             <table className={table}>
@@ -160,8 +175,8 @@ export default async function VendorDetailPage({
                 <tr>
                   <th className={thClass}>Number</th>
                   <th className={thClass}>Date</th>
-                  <th className={thClass}>Total</th>
-                  <th className={thClass}>Balance</th>
+                  <th className={thNum}>Total</th>
+                  <th className={thNum}>Balance</th>
                   <th className={thClass}>Status</th>
                 </tr>
               </thead>
@@ -169,21 +184,17 @@ export default async function VendorDetailPage({
                 {poRows.map((row) => (
                   <tr key={row.id} className={trHover}>
                     <td className={tdClass}>
-                      <Link href={`/purchase-orders/${row.id}`} className={link}>
+                      <Link href={`/purchase-orders/${row.id}`} className={rowLink}>
                         {row.poNumber}
                       </Link>
                     </td>
+                    <td className={tdClass}>{formatDate(row.orderDate)}</td>
+                    <td className={tdNum}>AED {formatMoney(row.grandTotal)}</td>
+                    <td className={tdNum}>AED {formatMoney(row.balanceDue)}</td>
                     <td className={tdClass}>
-                      {row.orderDate.toLocaleDateString("en-AE", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
-                    <td className={tdClass}>AED {formatMoney(row.grandTotal)}</td>
-                    <td className={tdClass}>AED {formatMoney(row.balanceDue)}</td>
-                    <td className={tdClass}>
-                      <span className={badgeClass(statusTone(row.status))}>{row.status}</span>
+                      <span className={badgeClass(statusTone(row.status))}>
+                        {statusLabel(row.status)}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -191,16 +202,20 @@ export default async function VendorDetailPage({
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {canManage && (
-        <div className={cardClass}>
-          <h2 className={`${sectionTitle} mb-3`}>Danger zone</h2>
-          <p className={`${mutedText} mb-3`}>
-            A vendor with existing purchase orders cannot be deleted.
-          </p>
+        <section
+          className={`${cardClass} flex max-w-2xl flex-wrap items-center justify-between gap-4`}
+        >
+          <div>
+            <h2 className={sectionTitle}>Delete vendor</h2>
+            <p className={`${hintText} mt-1`}>
+              Only possible while the vendor has no purchase orders.
+            </p>
+          </div>
           <DeleteVendorButton vendorId={vendor.id} />
-        </div>
+        </section>
       )}
     </main>
   );
